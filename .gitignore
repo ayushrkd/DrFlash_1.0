@@ -1,0 +1,87 @@
+# JARVIS — Ignore patterns
+# ========================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# uv
+.uv/
+
+# Node / Electron
+node_modules/
+apps/desktop/dist/
+apps/desktop/out/
+.next/
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment & Secrets — NEVER commit these
+.env
+.env.local
+.env.production
+*.pem
+*.key
+*.crt
+credentials/
+secrets/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+sandbox/
+workspace/
+.pytest_cache/
+.coverage
+htmlcov/
+coverage/
+
+# Model weights — never commit large files
+*.gguf
+*.bin
+*.safetensors
+*.onnx
+models/
+
+# Experiment outputs
+experiments/*/results/
+experiments/*/artifacts/
+evals/reports/*.json
+
+# Build artifacts
+*.pyc
+*.pyo
