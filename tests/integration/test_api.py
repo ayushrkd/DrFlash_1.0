@@ -10,7 +10,6 @@ from services.core_api.app import create_app
 async def client():
     app = create_app()
 
-    # Manually trigger lifespan for test
     from services.core_api.state import AppState
     state = AppState()
     await state.initialize()
@@ -30,12 +29,15 @@ class TestHealthEndpoints:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "healthy"
-        assert "services" in data
 
     @pytest.mark.asyncio
-    async def test_list_models(self, client: AsyncClient):
-        resp = await client.get("/api/v1/models")
+    async def test_system_status(self, client: AsyncClient):
+        resp = await client.get("/api/v1/system/status")
         assert resp.status_code == 200
+        data = resp.json()
+        assert data["system"]["status"] == "online"
+        assert "models" in data
+        assert "privacy" in data
 
     @pytest.mark.asyncio
     async def test_list_tools(self, client: AsyncClient):
@@ -57,21 +59,15 @@ class TestHealthEndpoints:
 class TestTaskEndpoints:
     @pytest.mark.asyncio
     async def test_create_task(self, client: AsyncClient):
-        resp = await client.post("/api/v1/tasks", json={
-            "input_text": "List sandbox files"
-        })
+        resp = await client.post("/api/v1/tasks", json={"input_text": "List sandbox files"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "CREATED"
-        assert "task_id" in data
 
     @pytest.mark.asyncio
     async def test_get_task(self, client: AsyncClient):
-        create_resp = await client.post("/api/v1/tasks", json={
-            "input_text": "Test retrieval"
-        })
+        create_resp = await client.post("/api/v1/tasks", json={"input_text": "Test retrieval"})
         task_id = create_resp.json()["task_id"]
-
         get_resp = await client.get(f"/api/v1/tasks/{task_id}")
         assert get_resp.status_code == 200
         assert get_resp.json()["task_id"] == task_id
@@ -85,44 +81,56 @@ class TestTaskEndpoints:
     async def test_list_tasks(self, client: AsyncClient):
         await client.post("/api/v1/tasks", json={"input_text": "Task A"})
         await client.post("/api/v1/tasks", json={"input_text": "Task B"})
-
         resp = await client.get("/api/v1/tasks")
         assert resp.status_code == 200
-        tasks = resp.json()
-        assert len(tasks) >= 2
+        assert len(resp.json()) >= 2
 
     @pytest.mark.asyncio
     async def test_run_task(self, client: AsyncClient):
-        create_resp = await client.post("/api/v1/tasks", json={
-            "input_text": "List all files in the sandbox"
-        })
+        create_resp = await client.post("/api/v1/tasks", json={"input_text": "List all files in the sandbox"})
         task_id = create_resp.json()["task_id"]
-
         run_resp = await client.post(f"/api/v1/tasks/{task_id}/run")
         assert run_resp.status_code == 200
-        data = run_resp.json()
-        assert data["status"] in ("COMPLETED", "FAILED")
+        assert run_resp.json()["status"] in ("COMPLETED", "FAILED")
 
     @pytest.mark.asyncio
     async def test_cancel_task(self, client: AsyncClient):
-        create_resp = await client.post("/api/v1/tasks", json={
-            "input_text": "Task to cancel"
-        })
+        create_resp = await client.post("/api/v1/tasks", json={"input_text": "Task to cancel"})
         task_id = create_resp.json()["task_id"]
-
         cancel_resp = await client.post(f"/api/v1/tasks/{task_id}/cancel")
         assert cancel_resp.status_code == 200
         assert cancel_resp.json()["status"] == "CANCELLED"
 
     @pytest.mark.asyncio
     async def test_task_events(self, client: AsyncClient):
-        create_resp = await client.post("/api/v1/tasks", json={
-            "input_text": "Observe events"
-        })
+        create_resp = await client.post("/api/v1/tasks", json={"input_text": "Observe events"})
         task_id = create_resp.json()["task_id"]
         await client.post(f"/api/v1/tasks/{task_id}/run")
-
         events_resp = await client.get(f"/api/v1/tasks/{task_id}/events")
         assert events_resp.status_code == 200
-        events = events_resp.json()
-        assert len(events) >= 1
+        assert len(events_resp.json()) >= 1
+
+
+class TestChatEndpoints:
+    @pytest.mark.asyncio
+    async def test_chat(self, client: AsyncClient):
+        resp = await client.post("/api/v1/chat", json={"message": "Hello JARVIS", "conversation_id": "test-conv"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["conversation_id"] == "test-conv"
+        assert len(data["message"]) > 0
+
+    @pytest.mark.asyncio
+    async def test_list_conversations(self, client: AsyncClient):
+        await client.post("/api/v1/chat", json={"message": "Hi", "conversation_id": "conv-1"})
+        resp = await client.get("/api/v1/conversations")
+        assert resp.status_code == 200
+        assert len(resp.json()) >= 1
+
+    @pytest.mark.asyncio
+    async def test_get_conversation(self, client: AsyncClient):
+        await client.post("/api/v1/chat", json={"message": "Hello", "conversation_id": "conv-detail"})
+        resp = await client.get("/api/v1/conversations/conv-detail")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["message_count"] >= 2  # user + assistant

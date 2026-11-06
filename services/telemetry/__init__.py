@@ -6,7 +6,7 @@ and performance tracking. Local-only by default.
 
 from __future__ import annotations
 
-import json
+import logging
 import sys
 import time
 from datetime import datetime, timezone
@@ -14,8 +14,13 @@ from datetime import datetime, timezone
 import structlog
 
 
+_LEVEL_MAP = {"DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
+
+
 def setup_logging(level: str = "INFO") -> None:
     """Configure structured logging for the application."""
+    numeric_level = _LEVEL_MAP.get(level.upper(), 20)
+    logging.basicConfig(format="%(message)s", level=numeric_level, stream=sys.stderr)
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
@@ -25,9 +30,7 @@ def setup_logging(level: str = "INFO") -> None:
             structlog.processors.format_exc_info,
             structlog.dev.ConsoleRenderer() if sys.stderr.isatty() else structlog.processors.JSONRenderer(),
         ],
-        wrapper_class=structlog.make_filtering_bound_logger(
-            structlog.get_level_from_name(level)
-        ),
+        wrapper_class=structlog.make_filtering_bound_logger(numeric_level),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=True,

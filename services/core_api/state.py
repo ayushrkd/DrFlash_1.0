@@ -6,6 +6,7 @@ available via `request.app.state.jarvis`.
 
 from __future__ import annotations
 
+from services.chat import ChatService
 from services.config import settings
 from services.execution_broker import ExecutionBroker
 from services.execution_broker.tools.sandbox_files import SandboxFilesTool
@@ -29,17 +30,17 @@ class AppState:
         self.memory = MemoryService()
         self.metrics = MetricsCollector()
 
-        # Model router
+        # Model router — prefer Ollama, fallback to mock
         self.model_router = ModelRouter()
         self._mock_provider = MockProvider()
         self._ollama_provider = OllamaProvider()
         self.model_router.register_provider(self._mock_provider)
         self.model_router.register_provider(self._ollama_provider)
 
-        # Default routing: use mock for now (safe, no dependencies)
-        self.model_router.set_role_routing("FAST_INTENT", "mock")
-        self.model_router.set_role_routing("LOCAL_DIALOG", "mock")
-        self.model_router.set_role_routing("HARD_REASONING", "mock")
+        # Route dialog/reasoning through Ollama for real responses
+        self.model_router.set_role_routing("FAST_INTENT", "ollama")
+        self.model_router.set_role_routing("LOCAL_DIALOG", "ollama")
+        self.model_router.set_role_routing("HARD_REASONING", "ollama")
 
         # Orchestrator
         self.orchestrator = Orchestrator(
@@ -48,10 +49,25 @@ class AppState:
             broker=self.broker,
         )
 
+        # Chat service
+        self.chat = ChatService(self.model_router)
+
+        # Track start time for uptime
+        import time
+        self.start_time = time.time()
+
     async def initialize(self) -> None:
         """Start all services."""
         await self.task_store.initialize()
         self._register_tools()
+
+        # Check Ollama health and fallback gracefully
+        health = await self._ollama_provider.health()
+        if health.get("status") != "healthy":
+            # Fallback to mock if Ollama isn't running
+            self.model_router.set_role_routing("FAST_INTENT", "mock")
+            self.model_router.set_role_routing("LOCAL_DIALOG", "mock")
+            self.model_router.set_role_routing("HARD_REASONING", "mock")
 
     def _register_tools(self) -> None:
         """Register all available tools with the broker."""

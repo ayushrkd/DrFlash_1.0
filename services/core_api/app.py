@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from services.config import settings
-from services.core_api.routers import approvals, health, tasks
+from services.core_api.routers import approvals, chat, health, tasks
 from services.core_api.state import AppState
 from services.telemetry import setup_logging
 
@@ -35,16 +35,15 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="JARVIS Core API",
         description="Personal AI Operating System — Local API",
-        version="0.1.0",
+        version="0.2.0",
         lifespan=lifespan,
         docs_url="/docs",
         redoc_url="/redoc",
     )
 
-    # Only allow localhost origins
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -53,6 +52,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(tasks.router)
     app.include_router(approvals.router)
+    app.include_router(chat.router)
 
     return app
 
