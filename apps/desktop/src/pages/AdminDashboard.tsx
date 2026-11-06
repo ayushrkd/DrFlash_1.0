@@ -49,6 +49,8 @@ export function AdminDashboard() {
   }
 
   const isOnline = status?.system.status === 'online'
+  const voiceState = (status as any)?.voice?.state || 'OFF'
+  const micOn = voiceState !== 'OFF'
   const providers = status?.models.providers || {}
   const ollamaOnline = (providers as any)?.ollama?.status === 'healthy'
 
@@ -77,10 +79,10 @@ export function AdminDashboard() {
             color={ollamaOnline ? 'var(--success)' : 'var(--warning)'}
           />
           <StatusPill
-            icon={<MicOff size={11} />}
+            icon={micOn ? <Mic size={11} /> : <MicOff size={11} />}
             label="Mic"
-            value="Off"
-            color="var(--text-dim)"
+            value={micOn ? voiceState : 'Off'}
+            color={micOn ? 'var(--success)' : 'var(--text-dim)'}
           />
           <StatusPill
             icon={<WifiOff size={11} />}

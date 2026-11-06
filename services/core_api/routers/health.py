@@ -62,11 +62,12 @@ async def system_status(request: Request) -> dict:
             "total_messages": sum(c.get("message_count", 0) for c in conversations),
         },
         "privacy": {
-            "microphone": "off",
+            "microphone": "on" if state.voice.config.enabled else "off",
             "screen_capture": "off",
             "cloud_streaming": "off",
-            "wake_word": "off",
+            "wake_word": "on" if state.voice.config.enabled else "off",
         },
+        "voice": state.voice.status(),
         "metrics": state.metrics.summary(),
     }
 

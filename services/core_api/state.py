@@ -17,6 +17,7 @@ from services.policy import PolicyEngine
 from services.task_store import TaskStore
 from services.telemetry import MetricsCollector
 from services.verifier import OutcomeVerifier
+from services.voice import VoiceEngine
 
 
 class AppState:
@@ -51,6 +52,9 @@ class AppState:
 
         # Chat service
         self.chat = ChatService(self.model_router)
+
+        # Voice engine
+        self.voice = VoiceEngine()
 
         # Track start time for uptime
         import time

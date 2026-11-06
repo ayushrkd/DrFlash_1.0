@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from services.config import settings
-from services.core_api.routers import approvals, chat, health, tasks
+from services.core_api.routers import approvals, chat, health, tasks, voice
 from services.core_api.state import AppState
 from services.telemetry import setup_logging
 
@@ -53,6 +53,7 @@ def create_app() -> FastAPI:
     app.include_router(tasks.router)
     app.include_router(approvals.router)
     app.include_router(chat.router)
+    app.include_router(voice.router)
 
     return app
 
