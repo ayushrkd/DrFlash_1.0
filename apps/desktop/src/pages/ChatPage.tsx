@@ -57,7 +57,7 @@ export function ChatPage() {
 
   const connectVoiceWS = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const ws = new WebSocket(`${protocol}//localhost:8000/api/v1/voice/ws`)
+    const ws = new WebSocket(`${protocol}//127.0.0.1:8000/api/v1/voice/ws`)
     wsRef.current = ws
 
     ws.onopen = () => {
@@ -369,7 +369,7 @@ export function ChatPage() {
               {isListening ? <Mic size={48} color="#fff" /> : <Radio size={48} color="var(--accent)" />}
             </div>
             <div style={S.voiceLabel}>
-              {isListening ? (interimTranscript || 'Listening...') : voiceStatus === 'IDLE' ? 'Say something...' : voiceStatus}
+              {isListening ? (interimTranscript || 'Listening...') : voiceStatus === 'IDLE' ? 'Say something...' : voiceStatus === 'OFF' ? 'Connecting...' : voiceStatus}
             </div>
             {interimTranscript && (
               <div style={S.interimText}>"{interimTranscript}"</div>
