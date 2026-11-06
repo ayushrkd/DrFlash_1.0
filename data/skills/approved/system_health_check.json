@@ -1,0 +1,36 @@
+{
+  "id": "01M6RYK9KQKPG1XVDJWYAANAPP",
+  "name": "system_health_check",
+  "description": "Check system health: CPU, RAM, GPU, disk, and running processes.",
+  "version": "1.0.0",
+  "status": "APPROVED",
+  "trigger_patterns": [
+    "system health",
+    "check system",
+    "system status",
+    "how is my computer"
+  ],
+  "steps": [
+    {
+      "tool_id": "system.info",
+      "action": "get_system_info",
+      "args": {}
+    },
+    {
+      "tool_id": "system.info",
+      "action": "get_disk_usage",
+      "args": {}
+    },
+    {
+      "tool_id": "system.info",
+      "action": "list_processes",
+      "args": {
+        "top_n": 10
+      }
+    }
+  ],
+  "tags": [
+    "system",
+    "diagnostic"
+  ]
+}

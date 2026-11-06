@@ -47,7 +47,7 @@ async def system_status(request: Request) -> dict:
     tools = state.broker.list_tools()
     conversations = state.chat.list_conversations()
 
-    return {
+    result = {
         "system": {
             "status": "online",
             "version": "0.2.0",
@@ -70,6 +70,25 @@ async def system_status(request: Request) -> dict:
         "voice": state.voice.status(),
         "metrics": state.metrics.summary(),
     }
+
+    # Add knowledge/skills/improvement stats
+    try:
+        skills = await state.skills.list_skills()
+        improvement = await state.improvement.get_summary()
+        prefs = await state.knowledge.get_preferences()
+        result["skills"] = {
+            "total": len(skills),
+            "approved": sum(1 for s in skills if s.get("status") == "APPROVED"),
+            "active": sum(1 for s in skills if s.get("status") == "ACTIVE"),
+        }
+        result["improvement"] = improvement
+        result["knowledge"] = {
+            "preferences": len(prefs),
+        }
+    except Exception:
+        pass
+
+    return result
 
 
 @router.get("/api/v1/system/activity")

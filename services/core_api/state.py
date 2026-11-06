@@ -13,21 +13,26 @@ from services.execution_broker import ExecutionBroker
 from services.execution_broker.tools.app_tools import AppLauncherTool, CodeRunnerTool
 from services.execution_broker.tools.sandbox_files import SandboxFilesTool
 from services.execution_broker.tools.system_info import SystemInfoTool
+from services.knowledge import KnowledgeService
 from services.memory import MemoryService
 from services.model_router import MockProvider, ModelRouter, OllamaProvider
 from services.orchestrator import Orchestrator
 from services.policy import PolicyEngine
+from services.skills import SkillsService
 from services.task_store import TaskStore
 from services.telemetry import MetricsCollector
 from services.verifier import OutcomeVerifier
 from services.voice import VoiceEngine
+from services.workspace import SelfImprovementLogger, WorkspaceManager
 
 
 class AppState:
     """Central application state holding all service instances."""
 
     def __init__(self) -> None:
-        self.task_store = TaskStore(db_path="./data/jarvis.db")
+        db_path = "./data/jarvis.db"
+
+        self.task_store = TaskStore(db_path=db_path)
         self.policy = PolicyEngine(allowed_paths=[str(settings.sandbox_path)])
         self.verifier = OutcomeVerifier()
         self.broker = ExecutionBroker(self.policy, self.verifier)
@@ -51,11 +56,19 @@ class AppState:
             broker=self.broker,
         )
 
-        # Chat service — connected to broker for real tool execution
+        # Knowledge & Skills — long-term memory
+        self.knowledge = KnowledgeService(db_path=db_path)
+        self.skills = SkillsService(db_path=db_path, skills_dir="./data/skills")
+
+        # Workspace & Self-improvement
+        self.workspace = WorkspaceManager(workspace_root="./data/workspace", db_path=db_path)
+        self.improvement = SelfImprovementLogger(db_path=db_path)
+
+        # Chat service — connected to everything
         self.chat = ChatService(
             model_router=self.model_router,
             broker=self.broker,
-            db_path="./data/jarvis.db",
+            db_path=db_path,
         )
 
         # Voice engine
@@ -68,6 +81,15 @@ class AppState:
         await self.task_store.initialize()
         self._register_tools()
         await self.chat.initialize()
+        await self.knowledge.initialize()
+        await self.skills.initialize()
+        await self.workspace.initialize()
+        await self.improvement.initialize()
+
+        # Give chat access to knowledge and skills for context
+        self.chat._knowledge = self.knowledge
+        self.chat._skills = self.skills
+        self.chat._improvement = self.improvement
 
         health = await self._ollama_provider.health()
         if health.get("status") != "healthy":
@@ -77,19 +99,16 @@ class AppState:
 
     def _register_tools(self) -> None:
         """Register all available tools with the broker."""
-        # File operations (sandbox-scoped)
         self.broker.register_tool(SandboxFilesTool(sandbox_root=str(settings.sandbox_path)))
-
-        # System info (read-only)
         self.broker.register_tool(SystemInfoTool())
-
-        # App launcher and web search
         self.broker.register_tool(AppLauncherTool())
-
-        # Sandboxed code runner
         self.broker.register_tool(CodeRunnerTool(sandbox_root=str(settings.sandbox_path)))
 
     async def shutdown(self) -> None:
         """Clean up resources."""
         await self.task_store.close()
         await self.chat.close()
+        await self.knowledge.close()
+        await self.skills.close()
+        await self.workspace.close()
+        await self.improvement.close()

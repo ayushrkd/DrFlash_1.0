@@ -100,7 +100,9 @@ You can use multiple tools by making multiple tool call blocks. After receiving 
 - If a tool fails, explain what happened and suggest alternatives.
 - Never fabricate tool results. Only report what the tool actually returned.
 - For dangerous operations, explain the risk and suggest safer alternatives.
-- You run locally via Ollama — no data leaves the machine unless the user explicitly asks to open a URL."""
+- You run locally via Ollama — no data leaves the machine unless the user explicitly asks to open a URL.
+- You are a long-term companion. You remember things, learn skills, and get better over time.
+- When you learn something about the user (name, preferences, projects), note it so you remember next time."""
 
 
 class ChatService:
@@ -109,6 +111,14 @@ class ChatService:
     def __init__(self, model_router: ModelRouter, broker: ExecutionBroker | None = None,
                  db_path: str = "./data/jarvis.db") -> None:
         self._router = model_router
+        self._broker = broker
+        self._conversations: dict[str, Conversation] = {}
+        self._db_path = db_path
+        self._db: aiosqlite.Connection | None = None
+        # These are injected by AppState after construction
+        self._knowledge = None  # KnowledgeService
+        self._skills = None     # SkillsService
+        self._improvement = None  # SelfImprovementLogger
         self._broker = broker
         self._conversations: dict[str, Conversation] = {}
         self._db_path = db_path
@@ -272,6 +282,18 @@ class ChatService:
 
         tools = self._get_tool_descriptions()
         system_prompt = _build_system_prompt(tools)
+
+        # Inject knowledge context
+        knowledge_ctx = ""
+        if self._knowledge:
+            knowledge_ctx = await self._knowledge.get_context_for_chat(user_message)
+        if self._skills:
+            skills_ctx = await self._skills.get_context_for_chat()
+            if skills_ctx:
+                knowledge_ctx += "\n" + skills_ctx
+        if knowledge_ctx:
+            system_prompt += f"\n\n## What You Know\n{knowledge_ctx}"
+
         context = conv.get_context_messages()
         messages = [{"role": "system", "content": system_prompt}] + context
 

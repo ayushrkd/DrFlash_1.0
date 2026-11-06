@@ -1,0 +1,33 @@
+{
+  "id": "01M6RYK9KWH56YS0WQZC6134TB",
+  "name": "workspace_report",
+  "description": "List and summarize all files in the sandbox workspace.",
+  "version": "1.0.0",
+  "status": "APPROVED",
+  "trigger_patterns": [
+    "workspace report",
+    "list my files",
+    "what's in workspace",
+    "show workspace"
+  ],
+  "steps": [
+    {
+      "tool_id": "sandbox.files",
+      "action": "list_files",
+      "args": {
+        "directory": "workspace"
+      }
+    },
+    {
+      "tool_id": "sandbox.files",
+      "action": "list_files",
+      "args": {
+        "directory": "fixtures"
+      }
+    }
+  ],
+  "tags": [
+    "files",
+    "workspace"
+  ]
+}
