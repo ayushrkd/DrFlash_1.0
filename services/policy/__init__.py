@@ -1,4 +1,4 @@
-"""JARVIS — Deny-by-Default Policy Engine.
+"""Dr. Flash — Deny-by-Default Policy Engine.
 
 The policy engine is the trusted authorization boundary. It evaluates
 every proposed tool call against risk tiers, resource scopes, and

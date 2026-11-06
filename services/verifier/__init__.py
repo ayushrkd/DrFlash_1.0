@@ -1,4 +1,4 @@
-"""JARVIS — Independent Outcome Verifier.
+"""Dr. Flash — Independent Outcome Verifier.
 
 Verifies that tool actions actually produced the expected outcome.
 "Tool returned success" is not enough — check the destination state.

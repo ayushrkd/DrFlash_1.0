@@ -1,4 +1,4 @@
-"""JARVIS — Durable Task Store.
+"""Dr. Flash — Durable Task Store.
 
 SQLite-backed task persistence with state machine enforcement,
 append-only event logging, and checkpoint/restart support.
@@ -27,7 +27,7 @@ class InvalidTransitionError(TaskStoreError):
 class TaskStore:
     """Async SQLite-backed task store with enforced state machine."""
 
-    def __init__(self, db_path: str = "./data/jarvis.db") -> None:
+    def __init__(self, db_path: str = "./data/drflash.db") -> None:
         self._db_path = db_path
         self._db: aiosqlite.Connection | None = None
 

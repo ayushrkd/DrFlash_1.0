@@ -1,7 +1,7 @@
 {
-  "name": "jarvis-desktop",
+  "name": "drflash-desktop",
   "version": "0.2.0",
-  "description": "JARVIS — Personal AI Operating System Desktop",
+  "description": "Dr. Flash — Personal AI Operating System Desktop",
   "private": true,
   "type": "module",
   "scripts": {

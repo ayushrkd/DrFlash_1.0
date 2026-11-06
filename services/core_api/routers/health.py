@@ -1,4 +1,4 @@
-"""JARVIS — Health and System Endpoints."""
+"""Dr. Flash — Health and System Endpoints."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ router = APIRouter(tags=["system"])
 @router.get("/health")
 async def health_check(request: Request) -> dict:
     """System health — no secrets exposed."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
     model_health = await state.model_router.health()
     uptime = int(time.time() - state.start_time)
     return {
@@ -35,7 +35,7 @@ async def health_check(request: Request) -> dict:
 @router.get("/api/v1/system/status")
 async def system_status(request: Request) -> dict:
     """Full system status for admin dashboard."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
     model_health = await state.model_router.health()
     uptime = int(time.time() - state.start_time)
     tasks = await state.task_store.list_tasks(limit=100)
@@ -94,7 +94,7 @@ async def system_status(request: Request) -> dict:
 @router.get("/api/v1/system/activity")
 async def system_activity(request: Request, limit: int = 50) -> list[dict]:
     """Recent activity feed for admin dashboard."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
     all_events = []
 
     # Get recent task events
@@ -128,14 +128,14 @@ async def system_activity(request: Request, limit: int = 50) -> list[dict]:
 @router.get("/api/v1/models")
 async def list_models(request: Request) -> dict:
     """Available model roles and health."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
     return await state.model_router.health()
 
 
 @router.get("/api/v1/tools")
 async def list_tools(request: Request) -> list[dict]:
     """List registered tools and their capabilities."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
     tools = state.broker.list_tools()
     return [
         {
@@ -159,7 +159,7 @@ async def list_tools(request: Request) -> list[dict]:
 @router.get("/api/v1/metrics/summary")
 async def metrics_summary(request: Request) -> dict:
     """Cost/latency/success counters — no secrets."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
     return state.metrics.summary()
 
 

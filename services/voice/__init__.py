@@ -1,4 +1,4 @@
-"""JARVIS — Voice Engine.
+"""Dr. Flash — Voice Engine.
 
 Local-first voice with:
 - TTS via edge-tts (high-quality Microsoft neural voices, free)
@@ -56,7 +56,7 @@ class VoiceConfig:
         self.rate: str = "+10%"       # Speech rate adjustment
         self.volume: str = "+0%"
         self.pitch: str = "+0Hz"
-        self.wake_word: str = "jarvis"
+        self.wake_word: str = "dr flash"
         self.auto_listen: bool = True  # Auto-listen after speaking
         self.silence_timeout_ms: int = 2000
 

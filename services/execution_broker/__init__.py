@@ -1,4 +1,4 @@
-"""JARVIS — Execution Broker.
+"""Dr. Flash — Execution Broker.
 
 The trusted boundary between the LLM/orchestrator and actual tool execution.
 Every tool call passes through the broker, which:

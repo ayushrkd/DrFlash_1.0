@@ -1,4 +1,4 @@
-"""Core data models for JARVIS.
+"""Core data models for DR_FLASH.
 
 These Pydantic models define the canonical shapes for tasks, tool calls,
 policy decisions, evidence, verification, and approvals. They are the

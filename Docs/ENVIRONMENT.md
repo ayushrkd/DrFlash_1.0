@@ -1,4 +1,4 @@
-# JARVIS — Development Environment Report
+# Dr. Flash — Development Environment Report
 
 > Generated: 2026-11-06 | Machine: Personal workstation
 

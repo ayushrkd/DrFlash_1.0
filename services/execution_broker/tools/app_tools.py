@@ -1,4 +1,4 @@
-"""JARVIS — App Launcher & Web Tools.
+"""Dr. Flash — App Launcher & Web Tools.
 
 Open URLs, launch applications, and perform web searches.
 All actions go through policy with appropriate risk levels.

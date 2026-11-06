@@ -43,7 +43,7 @@ export function AdminDashboard() {
     return <div className="animate-pulse" style={{ height: '100vh', display: 'grid', placeItems: 'center', color: 'var(--text-muted)' }}>
       <div style={{ textAlign: 'center' }}>
         <Sparkles size={48} style={{ marginBottom: 16, color: 'var(--accent)' }} />
-        <div style={{ fontSize: 18, fontWeight: 600 }}>Initializing JARVIS...</div>
+        <div style={{ fontSize: 18, fontWeight: 600 }}>Initializing Dr. Flash...</div>
       </div>
     </div>
   }
@@ -62,7 +62,7 @@ export function AdminDashboard() {
           <div style={S.logoMark}>
             <Zap size={18} color="var(--accent)" />
           </div>
-          <span style={S.logoText}>JARVIS</span>
+          <span style={S.logoText}>Dr. Flash</span>
           <span style={S.versionBadge}>v{status?.system.version}</span>
         </div>
         <div style={S.headerCenter}>

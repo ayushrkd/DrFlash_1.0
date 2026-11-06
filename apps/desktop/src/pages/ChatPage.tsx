@@ -333,7 +333,7 @@ export function ChatPage() {
           </div>
           <div style={S.topBarCenter}>
             <Sparkles size={14} color="var(--accent)" />
-            <span style={{ fontSize: 14, fontWeight: 600 }}>JARVIS</span>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>Dr. Flash</span>
             {voiceMode && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8 }}>
                 <div style={{ width: 6, height: 6, borderRadius: 3, background: voiceColor, boxShadow: `0 0 8px ${voiceColor}` }} />
@@ -385,7 +385,7 @@ export function ChatPage() {
           {!voiceMode && messages.length === 0 && (
             <div style={S.welcome}>
               <div style={S.welcomeIcon}><Sparkles size={40} color="var(--accent)" /></div>
-              <h2 style={S.welcomeTitle}>Hello, I'm JARVIS</h2>
+              <h2 style={S.welcomeTitle}>Hello, I'm Dr. Flash</h2>
               <p style={S.welcomeText}>
                 Your personal AI operating system. Ask me anything — I can help with research,
                 file analysis, task planning, and much more.
@@ -449,7 +449,7 @@ export function ChatPage() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isListening ? 'Listening...' : 'Message JARVIS...'}
+              placeholder={isListening ? 'Listening...' : 'Message Dr. Flash...'}
               rows={1}
               disabled={streaming || isListening}
               autoFocus={!voiceMode}
@@ -463,7 +463,7 @@ export function ChatPage() {
             </button>
           </div>
           <div style={S.inputFooter}>
-            JARVIS v0.2 · {voiceMode ? `Voice ${voiceStatus}` : 'Local LLM via Ollama'} · No data leaves your machine
+            Dr. Flash v0.2 · {voiceMode ? `Voice ${voiceStatus}` : 'Local LLM via Ollama'} · No data leaves your machine
           </div>
         </div>
       </div>

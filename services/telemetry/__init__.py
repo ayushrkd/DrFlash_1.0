@@ -1,4 +1,4 @@
-"""JARVIS — Structured Telemetry.
+"""Dr. Flash — Structured Telemetry.
 
 Structured JSON logging with no secrets, correlation IDs,
 and performance tracking. Local-only by default.

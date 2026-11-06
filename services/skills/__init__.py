@@ -1,6 +1,6 @@
-"""JARVIS — Skills Framework.
+"""Dr. Flash — Skills Framework.
 
-Skills are learned, reusable procedures that JARVIS can execute.
+Skills are learned, reusable procedures that DR_FLASH can execute.
 They evolve through a lifecycle:
 
   DRAFT → QUARANTINE → TESTING → APPROVED → ACTIVE → DEPRECATED
@@ -42,7 +42,7 @@ class SkillStatus(StrEnum):
 class SkillsService:
     """Manages the skill lifecycle, registry, and execution tracking."""
 
-    def __init__(self, db_path: str = "./data/jarvis.db",
+    def __init__(self, db_path: str = "./data/drflash.db",
                  skills_dir: str = "./data/skills") -> None:
         self._db_path = db_path
         self._skills_dir = Path(skills_dir)

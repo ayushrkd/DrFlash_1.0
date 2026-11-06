@@ -1,6 +1,6 @@
-"""JARVIS — System Tools.
+"""Dr. Flash — System Tools.
 
-Real system information and control tools. These provide JARVIS with
+Real system information and control tools. These provide DR_FLASH with
 actual awareness of the machine it's running on.
 """
 

@@ -1,4 +1,4 @@
-"""JARVIS — Approval Queue Endpoints."""
+"""Dr. Flash — Approval Queue Endpoints."""
 
 from __future__ import annotations
 

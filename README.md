@@ -1,8 +1,8 @@
-# JARVIS — Personal AI Operating System
+# Dr. Flash — Personal AI Operating System
 
 > Local-first, cloud-augmented, secure by construction, verifiable action, measurable improvement.
 
-JARVIS is a long-lived, permission-aware personal software agent that can accept multimodal intent, understand personal context, plan bounded tasks, execute actions through appropriate system interfaces, verify observable outcomes, and learn repeatable procedures under supervision.
+DR_FLASH is a long-lived, permission-aware personal software agent that can accept multimodal intent, understand personal context, plan bounded tasks, execute actions through appropriate system interfaces, verify observable outcomes, and learn repeatable procedures under supervision.
 
 ## Quick Start
 
@@ -14,8 +14,8 @@ JARVIS is a long-lived, permission-aware personal software agent that can accept
 ### 1. Clone and Setup Python Backend
 
 ```bash
-git clone <repo-url> jarvis
-cd jarvis
+git clone <repo-url> dr_flash
+cd dr_flash
 
 # Create virtual environment and install dependencies
 python -m uv venv .venv
@@ -85,7 +85,7 @@ User → Desktop UI (React) → Core API (FastAPI) → Orchestrator
 ## Project Structure
 
 ```
-jarvis/
+dr_flash/
 ├── services/              # Python backend
 │   ├── contracts/         # Shared Pydantic models and enums
 │   ├── core_api/          # FastAPI application and routes

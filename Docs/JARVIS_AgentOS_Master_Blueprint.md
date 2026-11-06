@@ -1,4 +1,4 @@
-# PROJECT JARVIS — Personal AgentOS
+# PROJECT Dr. Flash — Personal AgentOS
 ## Master Blueprint, Product Requirements, System Architecture, Research Roadmap, and Cursor Build Instructions
 
 > **Document type:** Living engineering specification / master context for a coding agent  
@@ -11,7 +11,7 @@
 
 # 0. READ THIS FIRST — INSTRUCTIONS FOR CURSOR / CODING AGENT
 
-You are implementing **JARVIS**, a serious, research-oriented personal AI operating layer. This is not a chatbot wrapper and not a toy demo. Use this specification as the source of design intent, **not** as permission to build the entire roadmap in one pass.
+You are implementing **DR_FLASH**, a serious, research-oriented personal AI operating layer. This is not a chatbot wrapper and not a toy demo. Use this specification as the source of design intent, **not** as permission to build the entire roadmap in one pass.
 
 **Your first action when handed this file:**
 
@@ -30,7 +30,7 @@ You are implementing **JARVIS**, a serious, research-oriented personal AI operat
 
 ## Definition of the project
 
-JARVIS = a long-lived, permission-aware personal software agent that can accept multimodal intent, understand personal context, plan bounded tasks, execute actions through appropriate system interfaces, verify observable outcomes, preserve useful memories, learn repeatable procedures under supervision, and optimize reliability/latency/cost over time.
+DR_FLASH = a long-lived, permission-aware personal software agent that can accept multimodal intent, understand personal context, plan bounded tasks, execute actions through appropriate system interfaces, verify observable outcomes, preserve useful memories, learn repeatable procedures under supervision, and optimize reliability/latency/cost over time.
 
 It should feel conversationally natural and demonstrate superhuman *software capabilities* (fast retrieval, parallel research, tireless consistency) without pretending to be conscious or infallible.
 
@@ -42,7 +42,7 @@ It should feel conversationally natural and demonstrate superhuman *software cap
 
 Sample request:
 
-> “Jarvis, prepare me for tomorrow's meeting. Find the relevant emails and project files, check our code progress, identify unresolved technical questions, research missing details, prepare a briefing, and leave a draft presentation ready for review.”
+> “Dr. Flash, prepare me for tomorrow's meeting. Find the relevant emails and project files, check our code progress, identify unresolved technical questions, research missing details, prepare a briefing, and leave a draft presentation ready for review.”
 
 Desired operation:
 
@@ -89,7 +89,7 @@ Desired operation:
 - **Hardware:** Good personal workstation but exact CPU/GPU/VRAM/RAM unknown. Benchmark first; no invented GPU requirements.
 - **Cloud:** AWS available, Bedrock preferred for cloud experimentation where quotas, policies, region, availability, privacy and credit eligibility permit. Do not assume any specific model is currently enabled.
 - **Development:** Python, TypeScript/React/Electron, and .NET/C# are natural starting choices, but adapters may be replaced based on measured results.
-- **Business separation:** JARVIS is a personal project. Business/client data is never imported without permission and appropriate handling. Keep personal and company account scopes isolated.
+- **Business separation:** DR_FLASH is a personal project. Business/client data is never imported without permission and appropriate handling. Keep personal and company account scopes isolated.
 
 ---
 
@@ -123,7 +123,7 @@ Desired operation:
 | L3 | Reliable multi-app agent | Structured UI/vision fallback, state-aware recovery | Narrow Delegate |
 | L4 | Skill-learning operator | Demonstrations -> validated reusable skills | Delegate for approved skills |
 | L5 | Personal AgentOS | Scheduled tasks, multi-device, agent-native workspaces, cost routing | Risk-tiered |
-| L6 | Research-grade JARVIS | Adaptive skills/models, proactive planning, robust self-diagnostics | Explicitly bounded |
+| L6 | Research-grade DR_FLASH | Adaptive skills/models, proactive planning, robust self-diagnostics | Explicitly bounded |
 
 **Progression condition:** Promote a feature only after completing its acceptance tests and a security review. “Future ideal” is a direction, not a date promise.
 
@@ -320,7 +320,7 @@ Microphone -> local wake word -> connect authenticated Bedrock duplex stream
 | TTS | Kokoro-compatible ONNX runtime / sherpa-onnx TTS / Piper-compatible implementations | Evaluate licensing, voice clarity, chunked synthesis and pronunciation |
 | Streaming voice orchestration | Pipecat or LiveKit Agents | Consider once needed; avoid unnecessary distributed signaling in local first build |
 | Cloud full-duplex | Amazon Nova 2.5 Sonic through Bedrock bidirectional streaming | Test region, IAM-based authentication, language/accent quality, pricing, interruptions |
-| Noise suppression / AEC | WebRTC audio processing or appropriate native stack | Required for reliable barge-in while JARVIS is speaking |
+| Noise suppression / AEC | WebRTC audio processing or appropriate native stack | Required for reliable barge-in while DR_FLASH is speaking |
 | User interruption | VAD + echo cancellation + stateful cancellation | Stop TTS immediately; preserve already-completed tools |
 
 **Licensing note:** openWakeWord's library is Apache-2.0, but repository-distributed pretrained wake-word weights may have noncommercial/ShareAlike terms. Confirm the exact model license before reuse in a commercial distribution; a custom trained model is an alternative. Kokoro/other TTS model weights and inference library dependencies need separate checks.
@@ -336,7 +336,7 @@ Transitions:
 - `MUTED`: hardware/software mic disabled; no capture.
 - `PAUSED`: explicit privacy control; no wake detection.
 - `INTERRUPTED`: user barge-in; stop audio immediately and cancel uncommitted intent generation.
-- `AWAITING_APPROVAL`: JARVIS cannot interpret casual silence as approval; require explicit UI confirm or a separately authenticated verbal confirmation for appropriately low-risk cases.
+- `AWAITING_APPROVAL`: DR_FLASH cannot interpret casual silence as approval; require explicit UI confirm or a separately authenticated verbal confirmation for appropriately low-risk cases.
 - `ERROR`: fallback to text, always recoverable without reboot.
 
 Implementation requirements:
@@ -454,7 +454,7 @@ Evaluate UIA3 / .NET UI Automation, COM for Office, and microsoft/UFO² for rese
 
 ## 7.3 Browser worker
 
-Use Playwright with persistent isolated profile **created solely for JARVIS** during testing; optional controlled access to owner-approved logged-in sessions later. Prefer selectors from roles/test IDs/dom state. Verify navigation/network changes, avoid brittle CSS selectors, normalize downloads into approved workspace. Block unapproved hosts and local-network metadata endpoints in sandboxed browser environments. Treat web page instructions as untrusted data.
+Use Playwright with persistent isolated profile **created solely for DR_FLASH** during testing; optional controlled access to owner-approved logged-in sessions later. Prefer selectors from roles/test IDs/dom state. Verify navigation/network changes, avoid brittle CSS selectors, normalize downloads into approved workspace. Block unapproved hosts and local-network metadata endpoints in sandboxed browser environments. Treat web page instructions as untrusted data.
 
 ## 7.4 Visual worker
 
@@ -698,7 +698,7 @@ Useful fine-tuning targets, in order:
 
 Methods: prompt baselines -> supervised fine-tuning with LoRA/QLoRA (e.g., PEFT/TRL/Unsloth) -> optional distillation from evaluated traces -> quantization/latency tuning. Do not train on client/private data without authorization. No automatic online weight updates from live tool outcomes. Maintain train/dev/test splits by *workflow family and app version*, prevent duplicate/leaky examples, document data rights and licenses.
 
-Do not train a new general LLM from scratch unless the objective is explicitly educational. The expected ROI for personal JARVIS is much higher from better interfaces, memory, skills, verification and routing.
+Do not train a new general LLM from scratch unless the objective is explicitly educational. The expected ROI for personal DR_FLASH is much higher from better interfaces, memory, skills, verification and routing.
 
 ## 10.5 Skills as compiled programs
 
@@ -777,13 +777,13 @@ Benchmark from fixed start states. Re-run whenever a model version, prompt, skil
 
 ## 11.1 AWS strategy
 
-Start with **Bedrock only** for model inference. Resist deploying EC2 GPUs or managed distributed services before measuring need. A rented 24/7 GPU can dominate costs even when no one is talking to JARVIS. If local hardware is strong, use it for steady low-cost voice and routing. AWS is for on-demand high-capability inference, experiments and occasional parallel batch work.
+Start with **Bedrock only** for model inference. Resist deploying EC2 GPUs or managed distributed services before measuring need. A rented 24/7 GPU can dominate costs even when no one is talking to DR_FLASH. If local hardware is strong, use it for steady low-cost voice and routing. AWS is for on-demand high-capability inference, experiments and occasional parallel batch work.
 
 Before enabling any AWS component:
 
 - Confirm AWS account identity, role, permission boundary, selected region, model access and service quotas.
 - Confirm credit eligibility and expiry, plus pricing *in that region*.
-- Configure tag strategy (`project=jarvis`, `environment=dev`, `owner=personal`), application request metering, AWS Budgets and Cost Anomaly Detection.
+- Configure tag strategy (`project=drflash`, `environment=dev`, `owner=personal`), application request metering, AWS Budgets and Cost Anomaly Detection.
 - Use IAM roles/SSO/temporary credentials, **not** embedded long-lived keys.
 - Avoid sending sensitive client docs to the wrong region; request per-source cloud-transmission consent.
 - Model invocation logging can include prompts/responses when enabled; configure intentionally, redact, and limit retention.
@@ -924,9 +924,9 @@ Every provider must report model ID, request ID, token/audio usage where availab
 # 13. REPOSITORY STRUCTURE (MODULAR MONOREPO)
 
 ```text
-jarvis/
+dr_flash/
 ├── README.md
-├── JARVIS_AgentOS_Master_Blueprint.md
+├── DRFLASH_AgentOS_Master_Blueprint.md
 ├── .env.example                 # placeholders only, never credentials
 ├── .gitignore
 ├── pyproject.toml / uv.lock
@@ -1131,7 +1131,7 @@ Use fewer microservices than the diagram suggests initially: `core-api`, orchest
 - App-level monthly budget cutoff functions in tests.
 - Sensitive scopes remain separated under concurrent tasks.
 
-## Phase 6 — Long-term research-grade JARVIS (open-ended)
+## Phase 6 — Long-term research-grade DR_FLASH (open-ended)
 
 **Exploration tracks:**
 
@@ -1338,7 +1338,7 @@ Encrypted local DB and artifacts, test restore before trusting backups. Backups 
 
 **Do these in order; stop after each PR and report evidence.**
 
-### Ticket JARVIS-001 — Environment and repository bootstrap
+### Ticket DR_FLASH-001 — Environment and repository bootstrap
 
 - Inspect machine and existing repo safely.
 - Create `docs/ENVIRONMENT.md` (GPU name/VRAM only if observable, versions; never secrets), `docs/IMPLEMENTATION_PLAN.md`, `docs/THREAT_MODEL.md`, `docs/adr/0001-architecture.md`.
@@ -1348,7 +1348,7 @@ Encrypted local DB and artifacts, test restore before trusting backups. Backups 
 
 **Acceptance:** fresh setup and tests pass; UI/API health visible; no cloud dependency.
 
-### Ticket JARVIS-002 — Typed task state and event log
+### Ticket DR_FLASH-002 — Typed task state and event log
 
 - Implement task store, typed schemas, transitions, cancellation, task events and checkpoints.
 - Implement deterministic mock planner/provider.
@@ -1356,7 +1356,7 @@ Encrypted local DB and artifacts, test restore before trusting backups. Backups 
 
 **Acceptance:** persists across process restart and recovers from simulated failure without duplicate commits.
 
-### Ticket JARVIS-003 — Broker + risk policy + approval queue
+### Ticket DR_FLASH-003 — Broker + risk policy + approval queue
 
 - Add tool capability registry, risk tiers, exact-scoped approval tokens, deny-by-default policy.
 - First two tools: `sample.files.list` (read) and `sample.files.write_report` (R1 limited to isolated fixture path).
@@ -1364,7 +1364,7 @@ Encrypted local DB and artifacts, test restore before trusting backups. Backups 
 
 **Acceptance:** path traversal, denied folder, expired approval, manipulated args, unexpected network action all blocked in tests.
 
-### Ticket JARVIS-004 — First complete verified task
+### Ticket DR_FLASH-004 — First complete verified task
 
 - User enters: “Summarize these sample documents into an approved reports folder.”
 - Use mock/local/cloud LLM under chosen provider flag to propose plan.
@@ -1373,24 +1373,24 @@ Encrypted local DB and artifacts, test restore before trusting backups. Backups 
 
 **Acceptance:** benchmarked repeatable success; no file read/write outside sandbox; task completes only after verification.
 
-### Ticket JARVIS-005 — Structured browser operator
+### Ticket DR_FLASH-005 — Structured browser operator
 
 - Build a local dummy web app and Playwright connector that fills a form and reads back server-side state.
 - Add focus/timeout/retry tests and cross-domain block.
 
-### Ticket JARVIS-006 — Windows UIA inspection
+### Ticket DR_FLASH-006 — Windows UIA inspection
 
 - C# worker under user session; inspect bounded demo app, return semantic tree, no click until policy integration tested.
 
-### Ticket JARVIS-007 — Local speech spike
+### Ticket DR_FLASH-007 — Local speech spike
 
 - Benchmark ONNX wake/VAD/ASR/TTS and mic privacy; no AWS stream during idle.
 
-### Ticket JARVIS-008 — Model router + Bedrock adapter
+### Ticket DR_FLASH-008 — Model router + Bedrock adapter
 
 - Conditional Bedrock integration using temporary credentials and available approved models; no credential logs; deterministic fallback.
 
-### Ticket JARVIS-009 — Memory with provenance
+### Ticket DR_FLASH-009 — Memory with provenance
 
 - Project-scoped storage, retrieval, correction, export, deletion; tests for scope isolation.
 
@@ -1401,9 +1401,9 @@ Encrypted local DB and artifacts, test restore before trusting backups. Backups 
 # 20. COPY-PASTE CURSOR AGENT INITIAL PROMPT
 
 ```text
-You are my principal engineer and applied AI research partner for PROJECT JARVIS.
+You are my principal engineer and applied AI research partner for PROJECT DR_FLASH.
 
-Read JARVIS_AgentOS_Master_Blueprint.md fully and treat it as design intent.
+Read DRFLASH_AgentOS_Master_Blueprint.md fully and treat it as design intent.
 Do not build the entire specification at once. Begin by inspecting the existing
 repository and available development environment without exposing credentials.
 
@@ -1530,4 +1530,4 @@ The true moat is likely **reliable task completion with memory, provenance, boun
 
 > **Build a reliable, secure, local-first operator first.** Add natural voice and persistent memory when the execution loop is proven. Use cloud reasoning selectively. Turn repeated successes into reviewed skills. Introduce an agent-native environment as the main architectural innovation. Pursue specialized fine-tuning only when the evidence shows it improves the system. Iterate forever through measured tasks, not speculative feature volume.
 
-**Start with Ticket JARVIS-001. Do not implement the entire roadmap in a single agent run.**
+**Start with Ticket DR_FLASH-001. Do not implement the entire roadmap in a single agent run.**

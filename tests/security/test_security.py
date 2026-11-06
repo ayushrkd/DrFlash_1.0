@@ -1,4 +1,4 @@
-"""Security and adversarial tests for JARVIS.
+"""Security and adversarial tests for DR_FLASH.
 
 These tests verify that the system correctly blocks unauthorized
 actions, path traversal, scope violations, and injection attempts.

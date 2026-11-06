@@ -1,4 +1,4 @@
-"""JARVIS — Core API Application.
+"""Dr. Flash — Core API Application.
 
 FastAPI application with localhost binding, typed endpoints,
 and service lifecycle management.
@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
 
     state = AppState()
     await state.initialize()
-    app.state.jarvis = state
+    app.state.drflash = state
 
     yield
 
@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="JARVIS Core API",
+        title="Dr. Flash Core API",
         description="Personal AI Operating System — Local API",
         version="0.2.0",
         lifespan=lifespan,

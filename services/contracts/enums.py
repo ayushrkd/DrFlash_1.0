@@ -1,4 +1,4 @@
-"""Core enumerations for JARVIS."""
+"""Core enumerations for DR_FLASH."""
 
 from enum import StrEnum
 

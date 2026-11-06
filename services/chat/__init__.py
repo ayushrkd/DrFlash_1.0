@@ -1,4 +1,4 @@
-"""JARVIS — Intelligent Chat Service with Tool Calling.
+"""Dr. Flash — Intelligent Chat Service with Tool Calling.
 
 This is the brain. The LLM receives the user's message along with
 descriptions of available tools. It decides whether to respond directly
@@ -76,7 +76,7 @@ def _build_system_prompt(tools: list) -> str:
             tool_block += f"  - Action: `{c.action}` — {c.description}\n"
             tool_block += f"    Risk: {c.risk.value} | Side effect: {c.side_effect.value}\n"
 
-    return f"""You are JARVIS, an intelligent personal AI operating system running locally on the user's Windows machine.
+    return f"""You are Dr. Flash, an intelligent personal AI operating system running locally on the user's Windows machine.
 
 ## Your Capabilities
 You have access to real tools that let you interact with the user's system. When the user asks you to DO something (open apps, search, check system info, work with files, run code), USE the tools.
@@ -109,7 +109,7 @@ class ChatService:
     """Intelligent chat with tool calling, persistent conversations."""
 
     def __init__(self, model_router: ModelRouter, broker: ExecutionBroker | None = None,
-                 db_path: str = "./data/jarvis.db") -> None:
+                 db_path: str = "./data/drflash.db") -> None:
         self._router = model_router
         self._broker = broker
         self._conversations: dict[str, Conversation] = {}

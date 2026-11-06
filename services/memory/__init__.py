@@ -1,4 +1,4 @@
-"""JARVIS — Memory Service (stub).
+"""Dr. Flash — Memory Service (stub).
 
 Placeholder for Phase 2. Provides the interface for personal memory
 with provenance tracking, but stores nothing persistently yet.

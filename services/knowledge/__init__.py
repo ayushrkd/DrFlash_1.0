@@ -1,4 +1,4 @@
-"""JARVIS — Knowledge Service.
+"""Dr. Flash — Knowledge Service.
 
 Long-term memory with provenance tracking. Stores facts, entities,
 relationships, and user preferences. Every piece of knowledge has:
@@ -34,9 +34,9 @@ class KnowledgeStatus(StrEnum):
 
 
 class KnowledgeSource(StrEnum):
-    USER_STATED = "USER_STATED"          # User explicitly told JARVIS
-    USER_CONFIRMED = "USER_CONFIRMED"    # JARVIS inferred, user confirmed
-    INFERRED = "INFERRED"                # JARVIS inferred from interactions
+    USER_STATED = "USER_STATED"          # User explicitly told DR_FLASH
+    USER_CONFIRMED = "USER_CONFIRMED"    # DR_FLASH inferred, user confirmed
+    INFERRED = "INFERRED"                # DR_FLASH inferred from interactions
     EXTRACTED = "EXTRACTED"              # Extracted from a document/file
     SYSTEM = "SYSTEM"                    # System-level fact
 
@@ -52,7 +52,7 @@ class KnowledgeScope(StrEnum):
 class KnowledgeService:
     """Persistent knowledge with provenance, temporal awareness, and corrections."""
 
-    def __init__(self, db_path: str = "./data/jarvis.db") -> None:
+    def __init__(self, db_path: str = "./data/drflash.db") -> None:
         self._db_path = db_path
         self._db: aiosqlite.Connection | None = None
 

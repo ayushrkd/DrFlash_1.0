@@ -13,7 +13,7 @@ async def client():
     from services.core_api.state import AppState
     state = AppState()
     await state.initialize()
-    app.state.jarvis = state
+    app.state.drflash = state
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -114,7 +114,7 @@ class TestTaskEndpoints:
 class TestChatEndpoints:
     @pytest.mark.asyncio
     async def test_chat(self, client: AsyncClient):
-        resp = await client.post("/api/v1/chat", json={"message": "Hello JARVIS", "conversation_id": "test-conv"})
+        resp = await client.post("/api/v1/chat", json={"message": "Hello DR_FLASH", "conversation_id": "test-conv"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["conversation_id"] == "test-conv"

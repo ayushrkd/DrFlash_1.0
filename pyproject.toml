@@ -1,7 +1,7 @@
 [project]
-name = "jarvis"
+name = "dr_flash"
 version = "0.1.0"
-description = "JARVIS — Personal AI Operating System. Local-first, cloud-augmented."
+description = "Dr. Flash — Personal AI Operating System. Local-first, cloud-augmented."
 requires-python = ">=3.12"
 license = {text = "MIT"}
 

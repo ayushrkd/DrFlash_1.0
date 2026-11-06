@@ -1,4 +1,4 @@
-"""JARVIS — Task Management Endpoints."""
+"""Dr. Flash — Task Management Endpoints."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ class TaskResponse(BaseModel):
 @router.post("/tasks", response_model=TaskResponse)
 async def create_task(body: CreateTaskRequest, request: Request) -> TaskResponse:
     """Create a new task in Observe mode."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
     task = await state.orchestrator.submit_task(body.input_text)
     return TaskResponse(
         task_id=task.task_id,
@@ -42,7 +42,7 @@ async def create_task(body: CreateTaskRequest, request: Request) -> TaskResponse
 @router.get("/tasks/{task_id}", response_model=TaskResponse)
 async def get_task(task_id: str, request: Request) -> TaskResponse:
     """Get current task state."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
     task = await state.task_store.get_task(task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -59,7 +59,7 @@ async def get_task(task_id: str, request: Request) -> TaskResponse:
 @router.get("/tasks")
 async def list_tasks(request: Request, status: str | None = None, limit: int = 50) -> list[TaskResponse]:
     """List tasks, optionally filtered by status."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
     task_status = TaskStatus(status) if status else None
     tasks = await state.task_store.list_tasks(status=task_status, limit=limit)
     return [
@@ -78,7 +78,7 @@ async def list_tasks(request: Request, status: str | None = None, limit: int = 5
 @router.post("/tasks/{task_id}/run")
 async def run_task(task_id: str, request: Request) -> TaskResponse:
     """Execute a task through the full orchestration pipeline."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
     task = await state.task_store.get_task(task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -97,7 +97,7 @@ async def run_task(task_id: str, request: Request) -> TaskResponse:
 @router.post("/tasks/{task_id}/cancel")
 async def cancel_task(task_id: str, request: Request) -> TaskResponse:
     """Cancel a queued or active task."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
     try:
         task = await state.orchestrator.cancel_task(task_id)
     except Exception as e:
@@ -115,7 +115,7 @@ async def cancel_task(task_id: str, request: Request) -> TaskResponse:
 @router.get("/tasks/{task_id}/events")
 async def task_events(task_id: str, request: Request) -> list[dict]:
     """Get append-only event log for a task."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
     events = await state.task_store.get_events(task_id)
     broker_events = state.broker.get_audit_log(task_id)
     all_events = [

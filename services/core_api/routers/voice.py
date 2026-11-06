@@ -1,4 +1,4 @@
-"""JARVIS — Voice API Endpoints.
+"""Dr. Flash — Voice API Endpoints.
 
 REST endpoints for TTS, voice configuration, and status.
 WebSocket for real-time voice sessions.
@@ -35,14 +35,14 @@ class VoiceConfigUpdate(BaseModel):
 @router.get("/status")
 async def voice_status(request: Request) -> dict:
     """Get voice engine status."""
-    engine = request.app.state.jarvis.voice
+    engine = request.app.state.drflash.voice
     return engine.status()
 
 
 @router.post("/enable")
 async def enable_voice(request: Request) -> dict:
     """Enable voice engine."""
-    engine = request.app.state.jarvis.voice
+    engine = request.app.state.drflash.voice
     engine.enable()
     return engine.status()
 
@@ -50,7 +50,7 @@ async def enable_voice(request: Request) -> dict:
 @router.post("/disable")
 async def disable_voice(request: Request) -> dict:
     """Disable voice engine."""
-    engine = request.app.state.jarvis.voice
+    engine = request.app.state.drflash.voice
     engine.disable()
     return engine.status()
 
@@ -58,7 +58,7 @@ async def disable_voice(request: Request) -> dict:
 @router.post("/config")
 async def update_config(body: VoiceConfigUpdate, request: Request) -> dict:
     """Update voice configuration."""
-    engine = request.app.state.jarvis.voice
+    engine = request.app.state.drflash.voice
     if body.enabled is not None:
         if body.enabled:
             engine.enable()
@@ -78,7 +78,7 @@ async def update_config(body: VoiceConfigUpdate, request: Request) -> dict:
 @router.post("/speak")
 async def speak(body: SpeakRequest, request: Request):
     """Synthesize text to speech, return MP3 audio. Falls back to signal browser TTS."""
-    engine = request.app.state.jarvis.voice
+    engine = request.app.state.drflash.voice
     if body.voice:
         engine.config.voice = body.voice
 
@@ -102,7 +102,7 @@ async def speak(body: SpeakRequest, request: Request):
 @router.post("/speak/stream")
 async def speak_stream(body: SpeakRequest, request: Request):
     """Stream TTS audio as it's synthesized."""
-    engine = request.app.state.jarvis.voice
+    engine = request.app.state.drflash.voice
 
     async def generate():
         async for chunk in engine.speak_stream(body.text):
@@ -118,7 +118,7 @@ async def speak_stream(body: SpeakRequest, request: Request):
 @router.get("/voices")
 async def list_voices(request: Request, language: str = "en") -> list[dict]:
     """List available TTS voices."""
-    engine = request.app.state.jarvis.voice
+    engine = request.app.state.drflash.voice
     return await engine.tts.list_voices(language)
 
 
@@ -136,7 +136,7 @@ async def voice_websocket(websocket: WebSocket):
     Server sends: { "type": "audio_end" }
     """
     await websocket.accept()
-    app_state = websocket.app.state.jarvis
+    app_state = websocket.app.state.drflash
     engine = app_state.voice
     chat = app_state.chat
     session_id = f"voice_{int(time.time() * 1000)}"

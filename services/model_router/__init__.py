@@ -1,4 +1,4 @@
-"""JARVIS — Model Router.
+"""Dr. Flash — Model Router.
 
 Abstract provider interface and routing logic. The router selects
 the best model for each request based on role, complexity, privacy,
@@ -73,7 +73,7 @@ class MockProvider(ModelProvider):
             return f"I understand your request. I have access to: {', '.join(tool_names)}. How would you like me to proceed?"
 
         if any(kw in lower for kw in ["hello", "hi", "hey"]):
-            return "Hello! I'm JARVIS, your personal AI assistant. How can I help you today?"
+            return "Hello! I'm Dr. Flash, your personal AI assistant. How can I help you today?"
         if any(kw in lower for kw in ["summarize", "summary"]):
             return "I'll analyze the content and provide a structured summary with key findings."
         if any(kw in lower for kw in ["help", "what can you"]):

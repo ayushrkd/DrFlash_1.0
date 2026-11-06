@@ -1,4 +1,4 @@
-"""JARVIS — Sandbox File Tools.
+"""Dr. Flash — Sandbox File Tools.
 
 Restricted file operations within the sandbox directory only.
 These are the first real tools, demonstrating the full pipeline:

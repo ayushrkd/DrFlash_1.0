@@ -1,4 +1,4 @@
-"""JARVIS — Task Orchestrator.
+"""Dr. Flash — Task Orchestrator.
 
 Single orchestrator with typed tools and a durable state machine.
 Interprets intent, generates plans, dispatches tool calls through
@@ -107,7 +107,7 @@ class Orchestrator:
             role="FAST_INTENT",
             messages=[
                 {"role": "system", "content": (
-                    "You are JARVIS, a task planning assistant. Analyze the user's request "
+                    "You are Dr. Flash, a task planning assistant. Analyze the user's request "
                     "and identify: 1) the goal, 2) required tools, 3) key parameters. "
                     "Be concise and structured."
                 )},
@@ -132,7 +132,7 @@ class Orchestrator:
             role="LOCAL_DIALOG",
             messages=[
                 {"role": "system", "content": (
-                    "You are JARVIS, a task planner. Given the user's request and available tools, "
+                    "You are Dr. Flash, a task planner. Given the user's request and available tools, "
                     "produce a JSON plan with steps. Each step has: description, tool_id, action, args. "
                     "Keep plans minimal and safe. Only use registered tools. "
                     "Respond with ONLY a JSON array of step objects."

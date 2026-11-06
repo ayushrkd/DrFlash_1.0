@@ -1,11 +1,11 @@
-# JARVIS — Implementation Plan
+# Dr. Flash — Implementation Plan
 
 > Phase 0/1 Architecture, Technology Decisions, and Acceptance Criteria  
 > Created: 2026-11-06
 
 ## Architecture Overview
 
-JARVIS is built as a **modular monolith** — logically separated services sharing one Python process, with a strict internal protocol. This avoids premature microservice complexity while keeping components independently testable and replaceable.
+DR_FLASH is built as a **modular monolith** — logically separated services sharing one Python process, with a strict internal protocol. This avoids premature microservice complexity while keeping components independently testable and replaceable.
 
 ```
 ┌──────────────────────────────────────────────────────────┐

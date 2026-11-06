@@ -2,11 +2,11 @@
 
 **Status:** Accepted  
 **Date:** 2026-11-06  
-**Deciders:** Owner + JARVIS AI Architect
+**Deciders:** Owner + DR_FLASH AI Architect
 
 ## Context
 
-JARVIS is a personal AI operating system that needs to:
+DR_FLASH is a personal AI operating system that needs to:
 1. Execute real actions on the local machine safely
 2. Plan tasks using LLMs without trusting their outputs for authorization
 3. Be modular enough to swap models, tools, and providers

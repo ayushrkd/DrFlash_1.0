@@ -1,4 +1,4 @@
-"""JARVIS — Chat Endpoints with streaming support."""
+"""Dr. Flash — Chat Endpoints with streaming support."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ class ChatResponse(BaseModel):
 @router.post("/chat", response_model=ChatResponse)
 async def chat(body: ChatRequest, request: Request) -> ChatResponse:
     """Send a message and get a complete response."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
     response = await state.chat.chat(body.conversation_id, body.message)
     conv = state.chat.get_or_create_conversation(body.conversation_id)
     last = conv.messages[-1] if conv.messages else None
@@ -37,7 +37,7 @@ async def chat(body: ChatRequest, request: Request) -> ChatResponse:
 @router.post("/chat/stream")
 async def chat_stream(body: ChatRequest, request: Request):
     """Stream a response token by token using SSE."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
 
     async def event_generator():
         async for token in state.chat.stream_chat(body.conversation_id, body.message):
@@ -58,14 +58,14 @@ async def chat_stream(body: ChatRequest, request: Request):
 @router.get("/conversations")
 async def list_conversations(request: Request) -> list[dict]:
     """List all conversations."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
     return state.chat.list_conversations()
 
 
 @router.get("/conversations/{conversation_id}")
 async def get_conversation(conversation_id: str, request: Request) -> dict:
     """Get full conversation history."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
     conv = state.chat.get_or_create_conversation(conversation_id)
     return conv.to_dict()
 
@@ -73,7 +73,7 @@ async def get_conversation(conversation_id: str, request: Request) -> dict:
 @router.delete("/conversations/{conversation_id}")
 async def delete_conversation(conversation_id: str, request: Request) -> dict:
     """Delete a conversation."""
-    state = request.app.state.jarvis
+    state = request.app.state.drflash
     deleted = state.chat.delete_conversation(conversation_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Conversation not found")

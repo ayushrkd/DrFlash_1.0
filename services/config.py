@@ -1,4 +1,4 @@
-"""JARVIS — Application Configuration.
+"""Dr. Flash — Application Configuration.
 
 Centralized, validated settings loaded from environment variables.
 """
@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="JARVIS_",
+        env_prefix="DRFLASH_",
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     secret_key: str = "change-me-to-a-random-string"
 
     # Database
-    db_url: str = "sqlite+aiosqlite:///./data/jarvis.db"
+    db_url: str = "sqlite+aiosqlite:///./data/drflash.db"
 
     # Sandbox
     sandbox_root: Path = Path("./sandbox")

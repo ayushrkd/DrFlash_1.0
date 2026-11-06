@@ -1,4 +1,4 @@
-"""JARVIS — Application State.
+"""Dr. Flash — Application State.
 
 Manages the lifecycle of all services.
 """
@@ -30,7 +30,7 @@ class AppState:
     """Central application state holding all service instances."""
 
     def __init__(self) -> None:
-        db_path = "./data/jarvis.db"
+        db_path = "./data/drflash.db"
 
         self.task_store = TaskStore(db_path=db_path)
         self.policy = PolicyEngine(allowed_paths=[str(settings.sandbox_path)])
