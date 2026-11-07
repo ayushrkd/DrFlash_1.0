@@ -25,7 +25,7 @@ start /B /MIN "" ".venv\Scripts\python.exe" run_server.py
 echo  [2/3] Waiting for server...
 :wait_server
 timeout /t 1 /nobreak >nul
-curl -s http://127.0.0.1:8000/health >nul 2>&1
+curl -s http://127.0.0.1:7827/health >nul 2>&1
 if errorlevel 1 goto wait_server
 echo  [OK] Server is running
 
@@ -40,9 +40,9 @@ echo  ========================================
 echo   ⚡ Dr. Flash is READY!
 echo  ========================================
 echo.
-echo   Dashboard: http://localhost:3000
-echo   Chat:      http://localhost:3000/chat
-echo   API:       http://127.0.0.1:8000/docs
+echo   Dashboard: http://localhost:7828
+echo   Chat:      http://localhost:7828/chat
+echo   API:       http://127.0.0.1:7827/docs
 echo.
 echo   Say "Dr. Flash" or press Ctrl+Alt+D
 echo.

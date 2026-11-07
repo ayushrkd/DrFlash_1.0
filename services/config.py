@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     # Core
     env: str = "development"
     host: str = "127.0.0.1"
-    port: int = 8000
+    port: int = 7827
     log_level: str = "INFO"
     secret_key: str = "change-me-to-a-random-string"
 

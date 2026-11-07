@@ -30,7 +30,7 @@ $attempts = 0
 while ($attempts -lt 20) {
     Start-Sleep -Seconds 1
     try {
-        $resp = Invoke-WebRequest -Uri "http://127.0.0.1:8000/health" -TimeoutSec 2 -ErrorAction Stop
+        $resp = Invoke-WebRequest -Uri "http://127.0.0.1:7827/health" -TimeoutSec 2 -ErrorAction Stop
         if ($resp.StatusCode -eq 200) { break }
     } catch {}
     $attempts++
@@ -51,9 +51,9 @@ Write-Host "  ========================================" -ForegroundColor Cyan
 Write-Host "   ⚡ Dr. Flash is READY!" -ForegroundColor Cyan
 Write-Host "  ========================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "   Dashboard: http://localhost:3000" -ForegroundColor White
-Write-Host "   Chat:      http://localhost:3000/chat" -ForegroundColor White
-Write-Host "   API:       http://127.0.0.1:8000/docs" -ForegroundColor White
+Write-Host "   Dashboard: http://localhost:7828" -ForegroundColor White
+Write-Host "   Chat:      http://localhost:7828/chat" -ForegroundColor White
+Write-Host "   API:       http://127.0.0.1:7827/docs" -ForegroundColor White
 Write-Host ""
 Write-Host "   Say 'Dr. Flash' or press Ctrl+Alt+D" -ForegroundColor Yellow
 Write-Host ""

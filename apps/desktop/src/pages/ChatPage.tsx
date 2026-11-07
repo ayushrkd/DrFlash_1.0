@@ -57,7 +57,7 @@ export function ChatPage() {
 
   const connectVoiceWS = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const ws = new WebSocket(`${protocol}//127.0.0.1:8000/api/v1/voice/ws`)
+    const ws = new WebSocket(`${protocol}//127.0.0.1:7827/api/v1/voice/ws`)
     wsRef.current = ws
 
     ws.onopen = () => {

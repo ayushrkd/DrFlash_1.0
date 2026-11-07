@@ -39,7 +39,7 @@ from PIL import Image, ImageDraw
 
 # ─── Configuration ──────────────────────────────────────────
 
-API_URL = "http://127.0.0.1:8000"
+API_URL = "http://127.0.0.1:7827"
 WAKE_PHRASES = ["dr flash", "doctor flash", "dr. flash", "hey flash", "flash"]
 HOTKEY = "ctrl+alt+d"
 SAMPLE_RATE = 16000
@@ -71,7 +71,32 @@ state = CompanionState()
 # ─── Icon creation ──────────────────────────────────────────
 
 def create_icon(color: str = "#3b82f6") -> Image.Image:
-    """Create a simple tray icon."""
+    """Load the Dr. Flash icon, or generate a simple one as fallback."""
+    icon_path = Path(__file__).parent / "assets" / "icon-64.png"
+    if icon_path.exists():
+        try:
+            base = Image.open(icon_path).convert("RGBA").resize((64, 64))
+            # Tint overlay for state indication
+            if color != "#3b82f6":
+                overlay = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+                draw = ImageDraw.Draw(overlay)
+                if color == "#22c55e":
+                    c = (34, 197, 94, 60)
+                elif color == "#f59e0b":
+                    c = (245, 158, 11, 60)
+                elif color == "#8b5cf6":
+                    c = (139, 92, 246, 60)
+                elif color == "#ef4444":
+                    c = (239, 68, 68, 60)
+                else:
+                    c = (59, 130, 246, 0)
+                draw.ellipse([2, 2, 62, 62], fill=c)
+                base = Image.alpha_composite(base, overlay)
+            return base
+        except Exception:
+            pass
+
+    # Fallback: generated icon
     size = 64
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
@@ -152,46 +177,74 @@ def audio_to_wav_bytes(audio: np.ndarray) -> bytes:
     return buf.getvalue()
 
 
+# ─── Offline ASR with Vosk ──────────────────────────────────
+
+_vosk_model = None
+
+def get_vosk_model():
+    """Load Vosk model (lazy, reused)."""
+    global _vosk_model
+    if _vosk_model is None:
+        from vosk import Model, SetLogLevel
+        SetLogLevel(-1)  # Suppress Vosk logs
+        model_path = str(Path(__file__).parent / "data" / "models" / "vosk-small")
+        if not Path(model_path).exists():
+            print(f"  ⚠ Vosk model not found at {model_path}")
+            print("    Run: .venv\\Scripts\\python -c \"from vosk import Model; ...\" to download")
+            return None
+        _vosk_model = Model(model_path)
+    return _vosk_model
+
+
 def transcribe_audio(audio: np.ndarray) -> str:
-    """Transcribe audio using speech_recognition."""
-    import speech_recognition as sr
+    """Transcribe audio using Vosk (fully offline)."""
+    from vosk import KaldiRecognizer
+    import json as _json
 
-    wav_bytes = audio_to_wav_bytes(audio)
-    recognizer = sr.Recognizer()
-    audio_data = sr.AudioData(wav_bytes[44:], SAMPLE_RATE, 2)  # Skip WAV header
+    model = get_vosk_model()
+    if model is None:
+        # Fallback to Google if Vosk unavailable
+        return _transcribe_google(audio)
 
+    rec = KaldiRecognizer(model, SAMPLE_RATE)
+    rec.SetWords(True)
+
+    # Convert to bytes
+    audio_bytes = audio.tobytes()
+    chunk_size = 4000
+    for i in range(0, len(audio_bytes), chunk_size):
+        rec.AcceptWaveform(audio_bytes[i:i + chunk_size])
+
+    result = _json.loads(rec.FinalResult())
+    return result.get("text", "")
+
+
+def _transcribe_google(audio: np.ndarray) -> str:
+    """Fallback: Google Speech Recognition (needs internet)."""
     try:
-        # Try Google's free API first (requires internet)
-        text = recognizer.recognize_google(audio_data)
-        return text
+        import speech_recognition as sr
+        wav_bytes = audio_to_wav_bytes(audio)
+        recognizer = sr.Recognizer()
+        audio_data = sr.AudioData(wav_bytes[44:], SAMPLE_RATE, 2)
+        return recognizer.recognize_google(audio_data)
     except Exception:
-        pass
-
-    try:
-        # Fallback to Windows SAPI
-        text = recognizer.recognize_google(audio_data, language="en-US")
-        return text
-    except Exception as e:
-        print(f"  ⚠ Transcription failed: {e}")
         return ""
 
 
-# ─── Wake word detection ────────────────────────────────────
+# ─── Wake word detection (offline) ──────────────────────────
 
 def detect_wake_word() -> bool:
-    """Listen briefly and check for wake word."""
+    """Listen briefly and check for wake word using Vosk (offline)."""
     try:
-        duration = 2.0
+        duration = 2.5
         audio = sd.rec(int(SAMPLE_RATE * duration), samplerate=SAMPLE_RATE,
                        channels=CHANNELS, dtype="float32")
         sd.wait()
 
-        # Check if there's speech (above noise threshold)
         rms = np.sqrt(np.mean(audio ** 2)) * 32768
-        if rms < SILENCE_THRESHOLD * 0.5:
+        if rms < SILENCE_THRESHOLD * 0.3:
             return False
 
-        # Transcribe and check for wake word
         audio_int16 = (audio * 32767).astype(np.int16)
         text = transcribe_audio(audio_int16)
         if not text:
@@ -436,11 +489,11 @@ def create_tray():
 
     def on_open_chat(icon, item):
         import webbrowser
-        webbrowser.open("http://localhost:3000/chat")
+        webbrowser.open("http://localhost:7828/chat")
 
     def on_open_dashboard(icon, item):
         import webbrowser
-        webbrowser.open("http://localhost:3000")
+        webbrowser.open("http://localhost:7828")
 
     def on_quit(icon, item):
         state.running = False
