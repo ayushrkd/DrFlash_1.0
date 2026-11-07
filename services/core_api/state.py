@@ -1,7 +1,4 @@
-"""Dr. Flash — Application State.
-
-Manages the lifecycle of all services.
-"""
+"""Dr. Flash — Application State."""
 
 from __future__ import annotations
 
@@ -11,13 +8,16 @@ from services.chat import ChatService
 from services.config import settings
 from services.execution_broker import ExecutionBroker
 from services.execution_broker.tools.app_tools import AppLauncherTool, CodeRunnerTool
+from services.execution_broker.tools.productivity import MeetingTool, ProductivityTool, ScreenCaptureTool
 from services.execution_broker.tools.sandbox_files import SandboxFilesTool
 from services.execution_broker.tools.system_info import SystemInfoTool
 from services.knowledge import KnowledgeService
+from services.meetings import MeetingService
 from services.memory import MemoryService
 from services.model_router import MockProvider, ModelRouter, OllamaProvider
 from services.orchestrator import Orchestrator
 from services.policy import PolicyEngine
+from services.screen import ScreenReader
 from services.skills import SkillsService
 from services.task_store import TaskStore
 from services.telemetry import MetricsCollector
@@ -56,7 +56,7 @@ class AppState:
             broker=self.broker,
         )
 
-        # Knowledge & Skills — long-term memory
+        # Knowledge & Skills
         self.knowledge = KnowledgeService(db_path=db_path)
         self.skills = SkillsService(db_path=db_path, skills_dir="./data/skills")
 
@@ -64,7 +64,13 @@ class AppState:
         self.workspace = WorkspaceManager(workspace_root="./data/workspace", db_path=db_path)
         self.improvement = SelfImprovementLogger(db_path=db_path)
 
-        # Chat service — connected to everything
+        # Meetings
+        self.meetings = MeetingService(meetings_dir="./data/meetings", db_path=db_path)
+
+        # Screen reader
+        self.screen = ScreenReader()
+
+        # Chat service
         self.chat = ChatService(
             model_router=self.model_router,
             broker=self.broker,
@@ -77,7 +83,6 @@ class AppState:
         self.start_time = time.time()
 
     async def initialize(self) -> None:
-        """Start all services."""
         await self.task_store.initialize()
         self._register_tools()
         await self.chat.initialize()
@@ -85,8 +90,8 @@ class AppState:
         await self.skills.initialize()
         await self.workspace.initialize()
         await self.improvement.initialize()
+        await self.meetings.initialize()
 
-        # Give chat access to knowledge and skills for context
         self.chat._knowledge = self.knowledge
         self.chat._skills = self.skills
         self.chat._improvement = self.improvement
@@ -103,12 +108,15 @@ class AppState:
         self.broker.register_tool(SystemInfoTool())
         self.broker.register_tool(AppLauncherTool())
         self.broker.register_tool(CodeRunnerTool(sandbox_root=str(settings.sandbox_path)))
+        self.broker.register_tool(ProductivityTool())
+        self.broker.register_tool(ScreenCaptureTool())
+        self.broker.register_tool(MeetingTool(self.meetings))
 
     async def shutdown(self) -> None:
-        """Clean up resources."""
         await self.task_store.close()
         await self.chat.close()
         await self.knowledge.close()
         await self.skills.close()
         await self.workspace.close()
         await self.improvement.close()
+        await self.meetings.close()
