@@ -97,17 +97,19 @@ def load_whisper():
         return _whisper_model
     try:
         from faster_whisper import WhisperModel
-        print("  Loading Whisper Large-V3 on GPU...")
-        _whisper_model = WhisperModel("large-v3", device="cuda", compute_type="float16")
-        print("  ✅ Whisper loaded (GPU)")
+        # Try GPU first with base model (small, fast, downloads quickly)
+        # User can change to "large-v3" for better accuracy once downloaded
+        print("  Loading Whisper on GPU...")
+        _whisper_model = WhisperModel("base", device="cuda", compute_type="float16")
+        print("  ✅ Whisper ready (GPU, base)")
     except Exception as e:
         print(f"  ⚠ Whisper GPU failed ({e}), trying CPU...")
         try:
             from faster_whisper import WhisperModel
             _whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
-            print("  ✅ Whisper loaded (CPU, base model)")
+            print("  ✅ Whisper ready (CPU, base)")
         except Exception as e2:
-            print(f"  ⚠ Whisper failed entirely: {e2}")
+            print(f"  ⚠ Whisper failed: {e2}")
     return _whisper_model
 
 def whisper_transcribe(audio_int16: np.ndarray) -> str:
@@ -317,24 +319,38 @@ def wake_loop():
             time.sleep(0.5)
             continue
         try:
+            # Record short clip
             audio = sd.rec(int(SAMPLE_RATE * WAKE_CLIP_SECONDS),
-                           samplerate=SAMPLE_RATE, channels=CHANNELS, dtype="float32")
-            sd.wait()
+                           samplerate=SAMPLE_RATE, channels=CHANNELS, dtype="float32",
+                           blocking=True)
+
+            # Check energy
             rms = np.sqrt(np.mean(audio ** 2)) * 32768
             if rms < WAKE_ENERGY_THRESHOLD:
                 continue
+
+            # Use Whisper if available (more accurate), else Vosk
             audio_int16 = (audio * 32767).astype(np.int16)
-            text = vosk_transcribe(audio_int16)
+            if _whisper_model is not None:
+                text = whisper_transcribe(audio_int16)
+            else:
+                text = vosk_transcribe(audio_int16)
+
             if not text:
                 continue
+
+            text_lower = text.lower().strip()
             for phrase in WAKE_PHRASES:
-                if phrase in text.lower():
+                if phrase in text_lower:
                     print(f"  ⚡ Wake: '{text}'")
                     handle_command()
                     break
-        except Exception:
-            time.sleep(0.5)
-        time.sleep(0.2)
+
+        except Exception as e:
+            print(f"  ⚠ Wake loop error: {e}")
+            time.sleep(1)
+
+        time.sleep(0.1)
 
 
 def on_hotkey():
