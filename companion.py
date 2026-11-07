@@ -1,6 +1,9 @@
 """Dr. Flash — System Tray Companion.
 
-Say "Dr. Flash" and it wakes up. No browser needed.
+Say "Dr. Flash" and it wakes up. Uses:
+- Vosk: wake word detection (fast, offline, low CPU)
+- faster-whisper: command transcription (accurate, GPU-accelerated)
+- Piper TTS: natural-sounding speech output (offline, neural)
 """
 
 from __future__ import annotations
@@ -9,6 +12,7 @@ import io
 import json
 import os
 import subprocess
+import tempfile
 import threading
 import time
 import wave
@@ -19,6 +23,7 @@ import keyboard
 import numpy as np
 import pystray
 import sounddevice as sd
+import soundfile as sf
 from PIL import Image, ImageDraw
 
 
@@ -31,26 +36,28 @@ SAMPLE_RATE = 16000
 CHANNELS = 1
 CONVERSATION_ID = "companion"
 
-# Tuning
 WAKE_CLIP_SECONDS = 2.5
-WAKE_ENERGY_THRESHOLD = 150      # catch even soft speech
-COMMAND_SILENCE_THRESHOLD = 250  # end of speech detection
-COMMAND_SILENCE_SECONDS = 2.0    # 2s silence = done talking
+WAKE_ENERGY_THRESHOLD = 150
+COMMAND_SILENCE_THRESHOLD = 250
+COMMAND_SILENCE_SECONDS = 2.0
 COMMAND_MAX_SECONDS = 30
+
+PROJECT_DIR = Path(__file__).parent
+PIPER_MODEL = str(PROJECT_DIR / "data" / "models" / "piper" / "en_US-lessac-medium.onnx")
 
 
 # ─── State ───────────────────────────────────────────────────
 
 class S:
     running = True
-    busy = False       # True when processing a command (record/think/speak)
+    busy = False
     wake_on = True
     icon = None
 
 state = S()
 
 
-# ─── Vosk Model (loaded once) ───────────────────────────────
+# ─── Vosk (wake word only) ──────────────────────────────────
 
 _vosk_model = None
 
@@ -61,17 +68,14 @@ def load_vosk():
     try:
         from vosk import Model, SetLogLevel
         SetLogLevel(-1)
-        model_path = str(Path(__file__).parent / "data" / "models" / "vosk-small")
-        if Path(model_path).exists():
-            _vosk_model = Model(model_path)
-            return _vosk_model
+        p = str(PROJECT_DIR / "data" / "models" / "vosk-small")
+        if Path(p).exists():
+            _vosk_model = Model(p)
     except Exception as e:
-        print(f"  ⚠ Vosk load failed: {e}")
-    return None
-
+        print(f"  ⚠ Vosk: {e}")
+    return _vosk_model
 
 def vosk_transcribe(audio_int16: np.ndarray) -> str:
-    """Transcribe with Vosk (offline, fast)."""
     from vosk import KaldiRecognizer
     model = load_vosk()
     if not model:
@@ -83,10 +87,106 @@ def vosk_transcribe(audio_int16: np.ndarray) -> str:
     return json.loads(rec.FinalResult()).get("text", "")
 
 
+# ─── faster-whisper (accurate command transcription) ─────────
+
+_whisper_model = None
+
+def load_whisper():
+    global _whisper_model
+    if _whisper_model is not None:
+        return _whisper_model
+    try:
+        from faster_whisper import WhisperModel
+        print("  Loading Whisper Large-V3 on GPU...")
+        _whisper_model = WhisperModel("large-v3", device="cuda", compute_type="float16")
+        print("  ✅ Whisper loaded (GPU)")
+    except Exception as e:
+        print(f"  ⚠ Whisper GPU failed ({e}), trying CPU...")
+        try:
+            from faster_whisper import WhisperModel
+            _whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
+            print("  ✅ Whisper loaded (CPU, base model)")
+        except Exception as e2:
+            print(f"  ⚠ Whisper failed entirely: {e2}")
+    return _whisper_model
+
+def whisper_transcribe(audio_int16: np.ndarray) -> str:
+    """Accurate transcription with faster-whisper."""
+    model = load_whisper()
+    if not model:
+        return vosk_transcribe(audio_int16)  # fallback
+
+    audio_f32 = audio_int16.astype(np.float32) / 32768.0
+    segments, info = model.transcribe(audio_f32, beam_size=5, language="en")
+    text = " ".join(seg.text for seg in segments).strip()
+    return text
+
+
+# ─── Piper TTS (natural offline voice) ──────────────────────
+
+def speak_piper(text: str) -> bool:
+    """Speak using Piper TTS. Returns True if successful."""
+    if not Path(PIPER_MODEL).exists():
+        return False
+
+    try:
+        tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+        tmp_path = tmp.name
+        tmp.close()
+
+        proc = subprocess.run(
+            [str(PROJECT_DIR / ".venv" / "Scripts" / "python.exe"),
+             "-m", "piper", "-m", PIPER_MODEL, "-f", tmp_path],
+            input=text, capture_output=True, text=True, timeout=30,
+            cwd=str(PROJECT_DIR),
+        )
+
+        if proc.returncode == 0 and Path(tmp_path).stat().st_size > 100:
+            data, sr = sf.read(tmp_path)
+            sd.play(data, sr)
+            sd.wait()
+            os.unlink(tmp_path)
+            return True
+        else:
+            os.unlink(tmp_path)
+            return False
+    except Exception as e:
+        print(f"  ⚠ Piper TTS: {e}")
+        return False
+
+
+def speak_sapi(text: str):
+    """Fallback: Windows built-in TTS."""
+    try:
+        clean = text.replace("'", "''").replace('"', "'").replace("\n", " ")[:1000]
+        subprocess.run(
+            ["powershell", "-Command",
+             f"Add-Type -AssemblyName System.Speech;"
+             f"$s = New-Object System.Speech.Synthesis.SpeechSynthesizer;"
+             f"$s.Rate = 1; $s.Speak('{clean}')"],
+            timeout=60, capture_output=True,
+        )
+    except Exception:
+        pass
+
+
+def speak(text: str):
+    """Speak using best available TTS."""
+    state.busy = True
+    icon_color(139, 92, 246)  # purple
+    short = text[:120].replace("\n", " ")
+    print(f"  🔊 {short}{'...' if len(text) > 120 else ''}")
+
+    if not speak_piper(text):
+        speak_sapi(text)
+
+    icon_color(59, 130, 246)  # blue
+
+
 # ─── Icon ────────────────────────────────────────────────────
 
 def mk_icon(r=59, g=130, b=246):
-    p = Path(__file__).parent / "assets" / "icon-64.png"
+    p = PROJECT_DIR / "assets" / "icon-64.png"
     if p.exists():
         try:
             return Image.open(p).convert("RGBA").resize((64, 64))
@@ -109,8 +209,7 @@ def icon_color(r, g, b):
 # ─── Audio Recording ─────────────────────────────────────────
 
 def record_command() -> np.ndarray | None:
-    """Record until 2s of silence or 30s max."""
-    icon_color(34, 197, 94)  # green = listening
+    icon_color(34, 197, 94)  # green
     chunks = []
     silence_t = None
     go = True
@@ -134,7 +233,7 @@ def record_command() -> np.ndarray | None:
             while go and (time.time() - t0) < COMMAND_MAX_SECONDS:
                 time.sleep(0.05)
     except Exception as e:
-        print(f"  ⚠ Mic error: {e}")
+        print(f"  ⚠ Mic: {e}")
         return None
 
     if not chunks or len(chunks) < 3:
@@ -145,32 +244,10 @@ def record_command() -> np.ndarray | None:
     return (audio * 32767).astype(np.int16)
 
 
-# ─── TTS (Windows built-in, always works) ────────────────────
-
-def speak(text: str):
-    state.busy = True
-    icon_color(139, 92, 246)  # purple = speaking
-    short = text[:150].replace("\n", " ")
-    print(f"  🔊 {short}{'...' if len(text) > 150 else ''}")
-    try:
-        # Escape for PowerShell
-        clean = text.replace("'", "''").replace('"', "'").replace("\n", " ")[:1000]
-        subprocess.run(
-            ["powershell", "-Command",
-             f"Add-Type -AssemblyName System.Speech;"
-             f"$s = New-Object System.Speech.Synthesis.SpeechSynthesizer;"
-             f"$s.Rate = 1; $s.Speak('{clean}')"],
-            timeout=60, capture_output=True,
-        )
-    except Exception as e:
-        print(f"  ⚠ TTS: {e}")
-    icon_color(59, 130, 246)  # blue = idle
-
-
-# ─── API Call ─────────────────────────────────────────────────
+# ─── API ─────────────────────────────────────────────────────
 
 def ask_drflash(text: str) -> str:
-    icon_color(245, 158, 11)  # orange = thinking
+    icon_color(245, 158, 11)  # orange
     print(f"  🧠 → {text}")
     try:
         r = httpx.post(f"{API_URL}/api/v1/chat",
@@ -179,22 +256,19 @@ def ask_drflash(text: str) -> str:
         r.raise_for_status()
         return r.json().get("message", "Hmm, something went wrong.")
     except Exception as e:
-        return f"Can't reach the server. Make sure it's running. ({str(e)[:60]})"
+        return f"Can't reach the server. ({str(e)[:60]})"
 
 
 # ─── Voice Command Flow ──────────────────────────────────────
 
 def handle_command():
-    """Wake → 'Yes?' → Record → Transcribe → Think → Speak."""
     if state.busy:
         return
     state.busy = True
 
     try:
-        # 1. Acknowledge
         speak("Yes?")
 
-        # 2. Record
         print("  🎤 Listening...")
         time.sleep(0.2)
         audio = record_command()
@@ -202,16 +276,16 @@ def handle_command():
             speak("Didn't catch that. Try again.")
             return
 
-        # 3. Transcribe (Vosk — offline, always works)
-        icon_color(245, 158, 11)  # orange
-        print("  📝 Transcribing...")
-        text = vosk_transcribe(audio)
+        # Transcribe with faster-whisper (accurate)
+        icon_color(245, 158, 11)
+        print("  📝 Transcribing with Whisper...")
+        text = whisper_transcribe(audio)
 
         if not text or len(text.strip()) < 2:
             speak("Sorry, couldn't make that out.")
             return
 
-        # Strip wake word from start
+        # Strip wake word
         t = text.lower()
         for w in WAKE_PHRASES:
             if t.startswith(w):
@@ -222,11 +296,7 @@ def handle_command():
             return
 
         print(f"  📝 Heard: '{text}'")
-
-        # 4. Think (API)
         response = ask_drflash(text)
-
-        # 5. Speak
         speak(response)
 
     except Exception as e:
@@ -246,34 +316,25 @@ def wake_loop():
         if not state.wake_on or state.busy:
             time.sleep(0.5)
             continue
-
         try:
-            # Record short clip
             audio = sd.rec(int(SAMPLE_RATE * WAKE_CLIP_SECONDS),
                            samplerate=SAMPLE_RATE, channels=CHANNELS, dtype="float32")
             sd.wait()
-
-            # Check energy
             rms = np.sqrt(np.mean(audio ** 2)) * 32768
             if rms < WAKE_ENERGY_THRESHOLD:
                 continue
-
-            # Check for wake word
             audio_int16 = (audio * 32767).astype(np.int16)
             text = vosk_transcribe(audio_int16)
             if not text:
                 continue
-
             for phrase in WAKE_PHRASES:
                 if phrase in text.lower():
                     print(f"  ⚡ Wake: '{text}'")
                     handle_command()
                     break
-
         except Exception:
             time.sleep(0.5)
-
-        time.sleep(0.2)  # Brief pause between checks
+        time.sleep(0.2)
 
 
 def on_hotkey():
@@ -283,7 +344,7 @@ def on_hotkey():
     threading.Thread(target=handle_command, daemon=True).start()
 
 
-# ─── Server Check ────────────────────────────────────────────
+# ─── Server ──────────────────────────────────────────────────
 
 def server_ok() -> bool:
     try:
@@ -292,11 +353,11 @@ def server_ok() -> bool:
         return False
 
 def start_server():
-    py = Path(__file__).parent / ".venv" / "Scripts" / "python.exe"
+    py = PROJECT_DIR / ".venv" / "Scripts" / "python.exe"
     if not py.exists():
         return False
     print("  🚀 Starting server...")
-    subprocess.Popen([str(py), "run_server.py"], cwd=str(Path(__file__).parent),
+    subprocess.Popen([str(py), "run_server.py"], cwd=str(PROJECT_DIR),
                      creationflags=subprocess.CREATE_NO_WINDOW,
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(20):
@@ -312,7 +373,7 @@ def start_server():
 def build_tray():
     def on_listen(i, it):
         threading.Thread(target=handle_command, daemon=True).start()
-    def on_toggle_wake(i, it):
+    def on_toggle(i, it):
         state.wake_on = not state.wake_on
         print(f"  Wake: {'ON' if state.wake_on else 'OFF'}")
     def on_chat(i, it):
@@ -324,7 +385,7 @@ def build_tray():
 
     menu = pystray.Menu(
         pystray.MenuItem("🎤 Listen Now", on_listen, default=True),
-        pystray.MenuItem("👂 Wake Word", on_toggle_wake, checked=lambda it: state.wake_on),
+        pystray.MenuItem("👂 Wake Word", on_toggle, checked=lambda it: state.wake_on),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("💬 Chat", on_chat),
         pystray.MenuItem("📊 Dashboard", on_dash),
@@ -345,7 +406,7 @@ def main():
 
     if not server_ok():
         if not start_server():
-            print("  ⚠ Run server manually first")
+            print("  ⚠ Start server manually first")
     else:
         print("  ✅ Server running")
 
@@ -355,9 +416,17 @@ def main():
     except Exception:
         pass
 
-    print("  Loading Vosk...")
+    # Load models
+    print("  Loading Vosk (wake word)...")
     load_vosk()
-    print("  ✅ Speech model loaded")
+    print("  ✅ Vosk ready")
+
+    load_whisper()
+
+    if Path(PIPER_MODEL).exists():
+        print(f"  ✅ Piper TTS: {Path(PIPER_MODEL).name}")
+    else:
+        print("  ⚠ Piper model not found — using Windows SAPI fallback")
 
     t = threading.Thread(target=wake_loop, daemon=True)
     t.start()

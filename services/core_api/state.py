@@ -8,9 +8,11 @@ from services.chat import ChatService
 from services.config import settings
 from services.execution_broker import ExecutionBroker
 from services.execution_broker.tools.app_tools import AppLauncherTool, CodeRunnerTool
+from services.execution_broker.tools.browser_tool import BrowserTool
 from services.execution_broker.tools.productivity import MeetingTool, ProductivityTool, ScreenCaptureTool
 from services.execution_broker.tools.sandbox_files import SandboxFilesTool
 from services.execution_broker.tools.system_info import SystemInfoTool
+from services.execution_broker.tools.windows_tool import WindowsTool
 from services.knowledge import KnowledgeService
 from services.meetings import MeetingService
 from services.memory import MemoryService
@@ -111,6 +113,8 @@ class AppState:
         self.broker.register_tool(ProductivityTool())
         self.broker.register_tool(ScreenCaptureTool())
         self.broker.register_tool(MeetingTool(self.meetings))
+        self.broker.register_tool(WindowsTool())
+        self.broker.register_tool(BrowserTool())
 
     async def shutdown(self) -> None:
         await self.task_store.close()
