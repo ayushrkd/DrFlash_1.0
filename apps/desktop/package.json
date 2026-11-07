@@ -1,13 +1,16 @@
 {
   "name": "drflash-desktop",
-  "version": "0.2.0",
-  "description": "Dr. Flash — Personal AI Operating System Desktop",
+  "version": "0.3.0",
+  "description": "Dr. Flash — Personal AI Companion",
   "private": true,
+  "main": "electron/main.js",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron": "electron .",
+    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:7828 && electron .\""
   },
   "dependencies": {
     "react": "^19.1.0",
@@ -21,6 +24,19 @@
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^4.5.0",
     "typescript": "^5.8.0",
-    "vite": "^6.3.0"
+    "vite": "^6.3.0",
+    "electron": "^45.2.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.drflash.app",
+    "productName": "Dr. Flash",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "win": {
+      "icon": "../../assets/drflash.ico",
+      "target": "nsis"
+    }
   }
 }

@@ -313,24 +313,57 @@ def handle_command():
 # ─── Wake Word Loop ──────────────────────────────────────────
 
 def wake_loop():
+    """Continuously listen for 'Dr. Flash' using a rolling buffer."""
     print("  👂 Listening for 'Dr. Flash'...")
+
+    buf = []
+    buf_seconds = WAKE_CLIP_SECONDS
+    buf_samples = int(SAMPLE_RATE * buf_seconds)
+    check_interval = 2.0  # Check every 2 seconds
+    last_check = time.time()
+
+    def audio_cb(indata, frames, time_info, status):
+        buf.append(indata.copy())
+        # Keep only last N seconds
+        total = sum(c.shape[0] for c in buf)
+        while total > buf_samples and len(buf) > 1:
+            total -= buf[0].shape[0]
+            buf.pop(0)
+
+    try:
+        stream = sd.InputStream(samplerate=SAMPLE_RATE, channels=CHANNELS,
+                                dtype="float32", blocksize=int(SAMPLE_RATE * 0.2),
+                                callback=audio_cb)
+        stream.start()
+    except Exception as e:
+        print(f"  ⚠ Could not open microphone: {e}")
+        print("  ⚠ Wake word disabled. Use Ctrl+Alt+D or the browser.")
+        return
+
     while state.running:
         if not state.wake_on or state.busy:
             time.sleep(0.5)
             continue
-        try:
-            # Record short clip
-            audio = sd.rec(int(SAMPLE_RATE * WAKE_CLIP_SECONDS),
-                           samplerate=SAMPLE_RATE, channels=CHANNELS, dtype="float32",
-                           blocking=True)
 
-            # Check energy
+        # Check buffer every 2 seconds
+        if time.time() - last_check < check_interval:
+            time.sleep(0.1)
+            continue
+        last_check = time.time()
+
+        if not buf:
+            continue
+
+        try:
+            audio = np.concatenate(buf)
             rms = np.sqrt(np.mean(audio ** 2)) * 32768
+
             if rms < WAKE_ENERGY_THRESHOLD:
                 continue
 
-            # Use Whisper if available (more accurate), else Vosk
             audio_int16 = (audio * 32767).astype(np.int16)
+
+            # Use Whisper if loaded, else Vosk
             if _whisper_model is not None:
                 text = whisper_transcribe(audio_int16)
             else:
@@ -343,14 +376,16 @@ def wake_loop():
             for phrase in WAKE_PHRASES:
                 if phrase in text_lower:
                     print(f"  ⚡ Wake: '{text}'")
+                    buf.clear()  # Clear buffer
                     handle_command()
                     break
 
         except Exception as e:
-            print(f"  ⚠ Wake loop error: {e}")
+            print(f"  ⚠ Wake: {e}")
             time.sleep(1)
 
-        time.sleep(0.1)
+    stream.stop()
+    stream.close()
 
 
 def on_hotkey():
