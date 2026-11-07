@@ -1,19 +1,28 @@
 """Dr. Flash — Meeting Recorder Service.
 
-Record meetings, auto-transcribe with Vosk (offline), summarize with
-Ollama, and organize folder-wise. Each meeting gets:
+Handles real meetings up to 2+ hours:
+- Records audio in chunks (5 min WAV files) to avoid memory issues
+- Transcribes each chunk independently with Vosk
+- Summarizes with Ollama in stages
+- Stores everything organized by folder
 
+Structure:
   data/meetings/YYYY-MM-DD_title/
-    ├── audio.wav          — Raw recording
-    ├── transcript.txt     — Full transcript
-    ├── summary.md         — AI-generated summary
-    └── metadata.json      — Title, date, duration, participants, tags
+    ├── chunks/
+    │   ├── chunk_001.wav
+    │   ├── chunk_002.wav
+    │   └── ...
+    ├── transcript.txt       — Full combined transcript
+    ├── transcript_chunks/
+    │   ├── chunk_001.txt
+    │   └── ...
+    ├── summary.md           — AI summary
+    └── metadata.json
 """
 
 from __future__ import annotations
 
 import json
-import os
 import threading
 import time
 import wave
@@ -26,68 +35,122 @@ import sounddevice as sd
 from ulid import ULID
 
 
-class MeetingRecorder:
-    """Records audio from the mic, stores as WAV."""
+CHUNK_DURATION_SECONDS = 300  # 5 minutes per chunk
+SAMPLE_RATE = 16000
+CHANNELS = 1
 
-    def __init__(self, sample_rate: int = 16000, channels: int = 1):
+
+class MeetingRecorder:
+    """Records audio in 5-minute chunks. Can handle hours of recording."""
+
+    def __init__(self, output_dir: str, sample_rate: int = SAMPLE_RATE):
         self.sample_rate = sample_rate
-        self.channels = channels
+        self._output_dir = Path(output_dir)
+        self._chunks_dir = self._output_dir / "chunks"
         self._recording = False
-        self._audio_chunks: list[np.ndarray] = []
+        self._current_chunk: list[np.ndarray] = []
+        self._chunk_index = 0
         self._stream = None
-        self._thread = None
+        self._start_time = 0.0
+        self._chunk_start_time = 0.0
+        self._total_samples = 0
+        self._lock = threading.Lock()
 
     @property
     def is_recording(self) -> bool:
         return self._recording
 
+    @property
+    def duration(self) -> float:
+        if not self._recording:
+            return self._total_samples / self.sample_rate
+        return time.time() - self._start_time
+
+    @property
+    def chunk_count(self) -> int:
+        return self._chunk_index
+
     def start(self) -> None:
         if self._recording:
             return
+        self._chunks_dir.mkdir(parents=True, exist_ok=True)
         self._recording = True
-        self._audio_chunks = []
+        self._chunk_index = 0
+        self._current_chunk = []
+        self._start_time = time.time()
+        self._chunk_start_time = time.time()
+        self._total_samples = 0
 
         def callback(indata, frames, time_info, status):
-            if self._recording:
-                self._audio_chunks.append(indata.copy())
+            if not self._recording:
+                return
+            with self._lock:
+                self._current_chunk.append(indata.copy())
+                self._total_samples += frames
+
+                # Check if chunk is full (5 minutes)
+                elapsed = time.time() - self._chunk_start_time
+                if elapsed >= CHUNK_DURATION_SECONDS:
+                    self._save_chunk()
 
         self._stream = sd.InputStream(
-            samplerate=self.sample_rate, channels=self.channels,
+            samplerate=self.sample_rate, channels=CHANNELS,
             dtype="float32", blocksize=int(self.sample_rate * 0.5),
             callback=callback,
         )
         self._stream.start()
 
-    def stop(self) -> np.ndarray | None:
-        if not self._recording:
+    def _save_chunk(self) -> str | None:
+        """Save current chunk to WAV file."""
+        if not self._current_chunk:
             return None
-        self._recording = False
-        if self._stream:
-            self._stream.stop()
-            self._stream.close()
-            self._stream = None
-        if not self._audio_chunks:
-            return None
-        return np.concatenate(self._audio_chunks)
 
-    def save_wav(self, audio: np.ndarray, path: str) -> None:
+        self._chunk_index += 1
+        filename = f"chunk_{self._chunk_index:03d}.wav"
+        filepath = self._chunks_dir / filename
+
+        audio = np.concatenate(self._current_chunk)
         audio_int16 = (audio * 32767).astype(np.int16)
-        with wave.open(path, "wb") as wf:
-            wf.setnchannels(self.channels)
+
+        with wave.open(str(filepath), "wb") as wf:
+            wf.setnchannels(CHANNELS)
             wf.setsampwidth(2)
             wf.setframerate(self.sample_rate)
             wf.writeframes(audio_int16.tobytes())
 
-    @property
-    def duration_seconds(self) -> float:
-        if not self._audio_chunks:
-            return 0
-        total_samples = sum(c.shape[0] for c in self._audio_chunks)
-        return total_samples / self.sample_rate
+        self._current_chunk = []
+        self._chunk_start_time = time.time()
+        print(f"    📦 Saved chunk {self._chunk_index} ({filepath.name})")
+        return str(filepath)
+
+    def stop(self) -> dict:
+        """Stop recording, save final chunk."""
+        if not self._recording:
+            return {"error": "Not recording"}
+        self._recording = False
+
+        if self._stream:
+            self._stream.stop()
+            self._stream.close()
+            self._stream = None
+
+        # Save remaining audio
+        with self._lock:
+            if self._current_chunk:
+                self._save_chunk()
+
+        total_duration = self._total_samples / self.sample_rate
+        chunk_files = sorted(self._chunks_dir.glob("chunk_*.wav"))
+
+        return {
+            "duration_seconds": round(total_duration, 1),
+            "chunks": len(chunk_files),
+            "chunk_files": [str(f) for f in chunk_files],
+        }
 
 
 class MeetingService:
-    """Manages meeting lifecycle: record, transcribe, summarize, store."""
+    """Manages meeting lifecycle with chunked recording and transcription."""
 
     def __init__(self, meetings_dir: str = "./data/meetings",
                  db_path: str = "./data/drflash.db") -> None:
@@ -95,7 +158,7 @@ class MeetingService:
         self._meetings_dir.mkdir(parents=True, exist_ok=True)
         self._db_path = db_path
         self._db: aiosqlite.Connection | None = None
-        self._recorder = MeetingRecorder()
+        self._recorder: MeetingRecorder | None = None
         self._active_meeting: dict | None = None
 
     async def initialize(self) -> None:
@@ -106,10 +169,8 @@ class MeetingService:
                 title TEXT NOT NULL,
                 date TEXT NOT NULL,
                 duration_seconds REAL NOT NULL DEFAULT 0,
+                chunk_count INTEGER NOT NULL DEFAULT 0,
                 folder_path TEXT NOT NULL,
-                audio_path TEXT,
-                transcript_path TEXT,
-                summary_path TEXT,
                 transcript TEXT,
                 summary TEXT,
                 participants TEXT NOT NULL DEFAULT '[]',
@@ -124,9 +185,8 @@ class MeetingService:
 
     async def start_recording(self, title: str, participants: list[str] | None = None,
                                tags: list[str] | None = None) -> dict:
-        """Start recording a meeting."""
-        if self._recorder.is_recording:
-            return {"error": "Already recording a meeting"}
+        if self._recorder and self._recorder.is_recording:
+            return {"error": "Already recording. Stop the current meeting first."}
 
         meeting_id = str(ULID())
         now = datetime.now()
@@ -137,23 +197,18 @@ class MeetingService:
         folder_path.mkdir(parents=True, exist_ok=True)
 
         self._active_meeting = {
-            "id": meeting_id,
-            "title": title,
-            "date": date_str,
+            "id": meeting_id, "title": title, "date": date_str,
             "folder_path": str(folder_path),
-            "participants": participants or [],
-            "tags": tags or [],
-            "started_at": now.isoformat(),
+            "participants": participants or [], "tags": tags or [],
         }
 
-        # Save metadata
-        meta_path = folder_path / "metadata.json"
-        meta_path.write_text(json.dumps(self._active_meeting, indent=2))
+        # Save initial metadata
+        (folder_path / "metadata.json").write_text(json.dumps(self._active_meeting, indent=2))
 
-        # Start recording
+        # Start chunked recording
+        self._recorder = MeetingRecorder(output_dir=str(folder_path))
         self._recorder.start()
 
-        # Save to DB
         assert self._db
         now_iso = datetime.now(timezone.utc).isoformat()
         await self._db.execute(
@@ -164,141 +219,189 @@ class MeetingService:
         )
         await self._db.commit()
 
-        return {"id": meeting_id, "title": title, "status": "recording", "folder": str(folder_path)}
+        return {"id": meeting_id, "title": title, "status": "recording",
+                "folder": str(folder_path), "message": f"Recording started. Audio saves in 5-minute chunks."}
 
     async def stop_recording(self) -> dict:
-        """Stop recording and save audio."""
-        if not self._recorder.is_recording or not self._active_meeting:
+        if not self._recorder or not self._recorder.is_recording or not self._active_meeting:
             return {"error": "No active recording"}
 
-        audio = self._recorder.stop()
-        if audio is None:
-            return {"error": "No audio captured"}
-
+        result = self._recorder.stop()
         meeting = self._active_meeting
-        folder = Path(meeting["folder_path"])
-        duration = len(audio) / self._recorder.sample_rate
 
-        # Save WAV
-        audio_path = folder / "audio.wav"
-        self._recorder.save_wav(audio, str(audio_path))
-
-        # Update DB
         assert self._db
         now_iso = datetime.now(timezone.utc).isoformat()
         await self._db.execute(
             """UPDATE meetings SET status = 'recorded', duration_seconds = ?,
-               audio_path = ?, updated_at = ? WHERE id = ?""",
-            (duration, str(audio_path), now_iso, meeting["id"])
+               chunk_count = ?, updated_at = ? WHERE id = ?""",
+            (result["duration_seconds"], result["chunks"], now_iso, meeting["id"])
         )
         await self._db.commit()
 
         # Update metadata
-        meeting["duration_seconds"] = duration
-        meeting["audio_path"] = str(audio_path)
+        meeting.update(result)
         meeting["status"] = "recorded"
-        (folder / "metadata.json").write_text(json.dumps(meeting, indent=2))
+        folder = Path(meeting["folder_path"])
+        (folder / "metadata.json").write_text(json.dumps(meeting, indent=2, default=str))
 
+        mid = meeting["id"]
         self._active_meeting = None
+        self._recorder = None
+
+        mins = int(result["duration_seconds"] // 60)
+        secs = int(result["duration_seconds"] % 60)
 
         return {
-            "id": meeting["id"], "title": meeting["title"],
-            "duration": round(duration, 1), "status": "recorded",
-            "audio_path": str(audio_path),
+            "id": mid, "title": meeting["title"],
+            "duration": f"{mins}m {secs}s",
+            "chunks": result["chunks"],
+            "status": "recorded",
+            "message": f"Recording stopped. {result['chunks']} chunk(s), {mins}m {secs}s total. Ready to transcribe.",
         }
 
     async def transcribe_meeting(self, meeting_id: str) -> dict:
-        """Transcribe a recorded meeting using Vosk (offline)."""
+        """Transcribe a meeting chunk by chunk using Vosk."""
         from vosk import Model, KaldiRecognizer, SetLogLevel
         SetLogLevel(-1)
 
         meeting = await self.get_meeting(meeting_id)
         if not meeting:
             return {"error": "Meeting not found"}
-        if not meeting.get("audio_path"):
-            return {"error": "No audio file"}
+
+        folder = Path(meeting["folder_path"])
+        chunks_dir = folder / "chunks"
+        if not chunks_dir.exists():
+            return {"error": "No audio chunks found"}
 
         model_path = str(Path("data/models/vosk-small"))
         if not Path(model_path).exists():
-            return {"error": "Vosk model not found. Download it first."}
+            return {"error": "Vosk model not found"}
 
         model = Model(model_path)
-        rec = KaldiRecognizer(model, 16000)
-        rec.SetWords(True)
+        transcript_dir = folder / "transcript_chunks"
+        transcript_dir.mkdir(exist_ok=True)
 
-        # Read WAV
-        with wave.open(meeting["audio_path"], "rb") as wf:
-            while True:
-                data = wf.readframes(4000)
-                if len(data) == 0:
-                    break
-                rec.AcceptWaveform(data)
+        full_transcript = []
+        chunk_files = sorted(chunks_dir.glob("chunk_*.wav"))
 
-        result = json.loads(rec.FinalResult())
-        transcript = result.get("text", "")
+        for i, chunk_file in enumerate(chunk_files, 1):
+            print(f"    Transcribing chunk {i}/{len(chunk_files)}: {chunk_file.name}")
+            rec = KaldiRecognizer(model, SAMPLE_RATE)
 
-        # Save transcript
-        folder = Path(meeting["folder_path"])
-        transcript_path = folder / "transcript.txt"
-        transcript_path.write_text(transcript, encoding="utf-8")
+            with wave.open(str(chunk_file), "rb") as wf:
+                while True:
+                    data = wf.readframes(4000)
+                    if len(data) == 0:
+                        break
+                    rec.AcceptWaveform(data)
 
-        # Update DB
+            result = json.loads(rec.FinalResult())
+            chunk_text = result.get("text", "")
+
+            # Save chunk transcript
+            (transcript_dir / f"chunk_{i:03d}.txt").write_text(chunk_text, encoding="utf-8")
+            if chunk_text.strip():
+                full_transcript.append(f"[Chunk {i}, ~{(i-1)*5}-{i*5} min]\n{chunk_text}")
+
+        combined = "\n\n".join(full_transcript)
+
+        # Save full transcript
+        (folder / "transcript.txt").write_text(combined, encoding="utf-8")
+
         assert self._db
         now_iso = datetime.now(timezone.utc).isoformat()
         await self._db.execute(
-            """UPDATE meetings SET status = 'transcribed', transcript = ?,
-               transcript_path = ?, updated_at = ? WHERE id = ?""",
-            (transcript, str(transcript_path), now_iso, meeting_id)
+            "UPDATE meetings SET status = 'transcribed', transcript = ?, updated_at = ? WHERE id = ?",
+            (combined, now_iso, meeting_id)
         )
         await self._db.commit()
 
-        return {"id": meeting_id, "transcript": transcript, "status": "transcribed"}
+        return {
+            "id": meeting_id, "status": "transcribed",
+            "chunks_transcribed": len(chunk_files),
+            "transcript_preview": combined[:500],
+            "transcript_length": len(combined),
+        }
 
     async def summarize_meeting(self, meeting_id: str) -> dict:
-        """Summarize a transcribed meeting using Ollama."""
+        """Summarize meeting using Ollama. For long meetings, summarize in stages."""
         import httpx
 
         meeting = await self.get_meeting(meeting_id)
         if not meeting or not meeting.get("transcript"):
-            return {"error": "No transcript to summarize"}
+            return {"error": "No transcript to summarize. Transcribe first."}
 
-        prompt = f"""Summarize this meeting transcript concisely. Include:
-1. Key discussion points
-2. Decisions made
-3. Action items (who, what, when)
-4. Important notes
+        transcript = meeting["transcript"]
 
-Transcript:
-{meeting['transcript'][:8000]}"""
+        # For long transcripts, summarize in chunks then combine
+        if len(transcript) > 6000:
+            # Stage 1: Summarize each section
+            sections = []
+            chunk_size = 4000
+            for i in range(0, len(transcript), chunk_size):
+                section = transcript[i:i + chunk_size]
+                sections.append(section)
+
+            section_summaries = []
+            for i, section in enumerate(sections):
+                prompt = f"Briefly summarize this part ({i+1}/{len(sections)}) of a meeting transcript:\n\n{section}"
+                try:
+                    async with httpx.AsyncClient(timeout=120.0) as client:
+                        resp = await client.post("http://localhost:11434/api/chat", json={
+                            "model": "qwen2.5:7b-instruct-q4_K_M",
+                            "messages": [{"role": "user", "content": prompt}],
+                            "stream": False,
+                        })
+                        data = resp.json()
+                        section_summaries.append(data.get("message", {}).get("content", ""))
+                except Exception as e:
+                    section_summaries.append(f"[Error summarizing section {i+1}: {e}]")
+
+            # Stage 2: Combine summaries into final
+            combined_summaries = "\n\n".join(f"Part {i+1}: {s}" for i, s in enumerate(section_summaries))
+            final_prompt = f"""Create a comprehensive meeting summary from these section summaries.
+Include: Key Discussion Points, Decisions Made, Action Items, Important Notes.
+
+Meeting: {meeting['title']}
+Date: {meeting['date']}
+
+{combined_summaries}"""
+        else:
+            final_prompt = f"""Summarize this meeting transcript. Include:
+1. Key Discussion Points
+2. Decisions Made
+3. Action Items (who, what, when)
+4. Important Notes
+
+Meeting: {meeting['title']}
+Date: {meeting['date']}
+
+{transcript}"""
 
         try:
             async with httpx.AsyncClient(timeout=120.0) as client:
                 resp = await client.post("http://localhost:11434/api/chat", json={
                     "model": "qwen2.5:7b-instruct-q4_K_M",
-                    "messages": [{"role": "user", "content": prompt}],
+                    "messages": [{"role": "user", "content": final_prompt}],
                     "stream": False,
                 })
-                data = resp.json()
-                summary = data.get("message", {}).get("content", "Summary generation failed.")
+                summary = resp.json().get("message", {}).get("content", "Summary failed.")
         except Exception as e:
-            summary = f"Error generating summary: {e}"
+            summary = f"Error: {e}"
 
-        # Save summary
         folder = Path(meeting["folder_path"])
-        summary_path = folder / "summary.md"
-        summary_path.write_text(f"# Meeting: {meeting['title']}\n\n{summary}", encoding="utf-8")
+        summary_md = f"# Meeting: {meeting['title']}\n**Date:** {meeting['date']}\n\n{summary}"
+        (folder / "summary.md").write_text(summary_md, encoding="utf-8")
 
-        # Update DB
         assert self._db
         now_iso = datetime.now(timezone.utc).isoformat()
         await self._db.execute(
-            """UPDATE meetings SET status = 'summarized', summary = ?,
-               summary_path = ?, updated_at = ? WHERE id = ?""",
-            (summary, str(summary_path), now_iso, meeting_id)
+            "UPDATE meetings SET status = 'summarized', summary = ?, updated_at = ? WHERE id = ?",
+            (summary, now_iso, meeting_id)
         )
         await self._db.commit()
 
-        return {"id": meeting_id, "summary": summary, "status": "summarized"}
+        return {"id": meeting_id, "status": "summarized", "summary": summary}
 
     async def get_meeting(self, meeting_id: str) -> dict | None:
         assert self._db
@@ -311,11 +414,11 @@ Transcript:
         assert self._db
         self._db.row_factory = aiosqlite.Row
         async with self._db.execute(
-            "SELECT id, title, date, duration_seconds, status, folder_path, tags, created_at FROM meetings ORDER BY date DESC LIMIT ?",
+            """SELECT id, title, date, duration_seconds, chunk_count, status,
+               folder_path, tags, created_at FROM meetings ORDER BY date DESC LIMIT ?""",
             (limit,)
         ) as cur:
-            rows = await cur.fetchall()
-            return [dict(row) for row in rows]
+            return [dict(row) for row in await cur.fetchall()]
 
     async def delete_meeting(self, meeting_id: str) -> bool:
         meeting = await self.get_meeting(meeting_id)
@@ -332,17 +435,18 @@ Transcript:
 
     @property
     def recording_status(self) -> dict:
-        if self._recorder.is_recording and self._active_meeting:
+        if self._recorder and self._recorder.is_recording and self._active_meeting:
             return {
                 "recording": True,
                 "meeting_id": self._active_meeting["id"],
                 "title": self._active_meeting["title"],
-                "duration": round(self._recorder.duration_seconds, 1),
+                "duration": round(self._recorder.duration, 1),
+                "chunks_saved": self._recorder.chunk_count,
             }
         return {"recording": False}
 
     async def close(self) -> None:
-        if self._recorder.is_recording:
+        if self._recorder and self._recorder.is_recording:
             self._recorder.stop()
         if self._db:
             await self._db.close()
