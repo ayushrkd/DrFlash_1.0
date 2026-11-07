@@ -3,7 +3,7 @@
   "version": "0.3.0",
   "description": "Dr. Flash — Personal AI Companion",
   "private": true,
-  "main": "electron/main.js",
+  "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",
